@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+title: "BEP Field Lab v2"
+message: "If you use this software, please cite it using the metadata below."
+type: software
+
+authors:
+  - family-names: "Quiroz"
+    given-names: "Nicolas Brian"
+    orcid: "https://orcid.org/0009-0003-8887-5429"
+
+identifiers:
+  - type: url
+    value: "https://github.com/bepframework/bep-field-lab"
+
+repository-code: "https://github.com/bepframework/bep-field-lab"
+
+abstract: >
+  BEP Field Lab is an interactive research tool for exploring the
+  Belonging–Energy–Prediction (BEP) framework using uploaded datasets.
+  The application allows researchers to map proxy variables, compute
+  composite field scores, visualize field dynamics, and compare BEP
+  composite performance against single-variable baselines.
+
+keywords:
+  - BEP framework
+  - cognition
+  - field dynamics
+  - exploratory data analysis
+  - behavioral science
+  - computational research tool
+
+license: MIT
+
+version: "2.1"
+date-released: 2026-03-15
+
+url: "https://github.com/bepframework/bep-field-lab"
