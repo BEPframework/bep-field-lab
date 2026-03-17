@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "BEP Field Lab v2"
+title: "BEP Field Lab v3"
 message: "If you use this software, please cite it using the metadata below."
 type: software
 
@@ -31,7 +31,7 @@ keywords:
 
 license: MIT
 
-version: "2.1"
+version: "3"
 date-released: 2026-03-15
 
 url: "https://github.com/bepframework/bep-field-lab"
