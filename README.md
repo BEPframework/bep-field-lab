@@ -1,4 +1,4 @@
-# BEP Field Lab v2
+# BEP Field Lab v3
 
 Research-grade interactive tool for exploring **Belonging–Energy–Prediction (BEP) field dynamics**.
 
@@ -77,7 +77,7 @@ https://doi.org/10.5281/zenodo.19042276
 ### Software
 
 Quiroz, N. B. (2026).  
-*BEP Field Lab v2* [Software].  
+*BEP Field Lab v3* [Software].  
 GitHub.  
 https://github.com/bepframework/bep-field-lab
 
