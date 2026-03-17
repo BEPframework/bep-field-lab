@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-BEP Field Lab v3
+BEP Field Lab v4
 Copyright (c) 2026 Nicolas Brian Quiroz, MD
 
 Author: Nicolas B. Quiroz, MD
@@ -12,7 +12,7 @@ Licensed under the MIT License.
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BEP Field Lab v3</title>
+  <title>BEP Field Lab v4</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
@@ -41,22 +41,12 @@ Licensed under the MIT License.
     }
     .shell { width: min(1500px, calc(100vw - 30px)); margin: 18px auto 40px; }
     .hero {
-      border: 1px solid var(--line);
-      border-radius: 30px;
-      padding: 28px;
+      border: 1px solid var(--line); border-radius: 30px; padding: 28px;
       background: linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      box-shadow: var(--shadow);
-      position: relative;
-      overflow: hidden;
-      margin-bottom: 18px;
+      box-shadow: var(--shadow); position: relative; overflow: hidden; margin-bottom: 18px;
     }
     .hero::after {
-      content: "";
-      position: absolute;
-      width: 280px;
-      height: 280px;
-      top: -90px;
-      right: -90px;
+      content: ""; position: absolute; width: 280px; height: 280px; top: -90px; right: -90px;
       background: radial-gradient(circle, rgba(114,212,255,.22), transparent 65%);
     }
     .hero h1 { margin: 0; font-size: clamp(2rem, 3.8vw, 3.4rem); line-height: 1.02; letter-spacing: -.04em; }
@@ -68,6 +58,7 @@ Licensed under the MIT License.
     }
     .pillbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
     .pill { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid var(--line); color: #dce9ff; font-size: .9rem; }
+    .pill.new { background: rgba(114,212,255,.10); border-color: rgba(114,212,255,.3); color: var(--accent); }
     .layout { display: grid; grid-template-columns: 400px 1fr; gap: 18px; }
     @media (max-width: 1150px) { .layout { grid-template-columns: 1fr; } }
     .panel { border: 1px solid var(--line); background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
@@ -77,7 +68,8 @@ Licensed under the MIT License.
     .panel-body { padding: 18px 20px 22px; }
     .stack { display: grid; gap: 16px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 850px) { .grid-2 { grid-template-columns: 1fr; } }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 850px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
     .dropzone { border: 1.5px dashed rgba(114,212,255,.45); background: rgba(114,212,255,.05); border-radius: 18px; padding: 18px; transition: .2s ease; }
     .dropzone.dragover { background: rgba(114,212,255,.12); border-color: rgba(151,255,201,.7); transform: translateY(-1px); }
     .dropzone strong { display: block; margin-bottom: 6px; font-size: 1rem; }
@@ -86,9 +78,14 @@ Licensed under the MIT License.
     .btn-primary { color: #03111b; background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 12px 26px rgba(114,212,255,.18); }
     .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.03); }
     .btn-secondary { color: var(--text); background: rgba(255,255,255,.06); border: 1px solid var(--line); }
+    .btn-accent3 { color: #03111b; background: linear-gradient(135deg, var(--accent3), #ffb84d); }
     .hidden { display: none !important; }
     label { display: block; font-size: .9rem; font-weight: 700; margin-bottom: 8px; color: #d8e7ff; }
-    select, input[type="number"], textarea { width: 100%; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--text); padding: 12px 14px; font-size: .95rem; outline: none; }
+    select, input[type="number"], input[type="range"], textarea {
+      width: 100%; border-radius: 14px; border: 1px solid var(--line);
+      background: rgba(255,255,255,.05); color: var(--text); padding: 12px 14px; font-size: .95rem; outline: none;
+    }
+    input[type="range"] { padding: 8px 2px; cursor: pointer; accent-color: var(--accent); }
     textarea { min-height: 72px; resize: vertical; }
     .help { margin-top: 6px; color: var(--muted); font-size: .83rem; line-height: 1.45; }
     .status { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.04); line-height: 1.5; font-size: .9rem; }
@@ -122,194 +119,565 @@ Licensed under the MIT License.
     .footer-note { color: var(--muted); font-size: .84rem; line-height: 1.55; }
     .legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: .84rem; }
     .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 999px; margin-right: 8px; vertical-align: middle; background: currentColor; }
+
+    /* ── Module tabs ── */
+    .module-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    .tab-btn {
+      padding: 10px 18px; border-radius: 999px; font-size: .88rem; font-weight: 700; cursor: pointer;
+      background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--muted); transition: .2s;
+    }
+    .tab-btn.active { background: rgba(114,212,255,.12); border-color: rgba(114,212,255,.4); color: var(--accent); }
+
+    /* ── Consciousness layer card ── */
+    .layer-stack { display: grid; gap: 10px; }
+    .layer-card {
+      border-radius: 16px; padding: 14px 16px; border: 1px solid var(--line);
+      background: rgba(255,255,255,.03); display: flex; align-items: flex-start; gap: 14px;
+    }
+    .layer-card.active-layer { border-color: rgba(114,212,255,.35); background: rgba(114,212,255,.06); }
+    .layer-badge {
+      min-width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center;
+      justify-content: center; font-size: 1.3rem; background: rgba(255,255,255,.06);
+    }
+    .layer-card h4 { margin: 0 0 4px; font-size: .95rem; }
+    .layer-card p { margin: 0; font-size: .84rem; color: var(--muted); line-height: 1.45; }
+
+    /* ── Fourth Field dyadic ── */
+    .ff-upload-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 860px) { .ff-upload-row { grid-template-columns: 1fr; } }
+    .ff-drop { border: 1.5px dashed rgba(151,255,201,.4); background: rgba(151,255,201,.04); border-radius: 16px; padding: 16px; }
+    .ff-drop.loaded { border-color: rgba(151,255,201,.7); background: rgba(151,255,201,.08); }
+    .ff-drop strong { display: block; margin-bottom: 4px; }
+    .ff-drop p { margin: 0 0 10px; color: var(--muted); font-size: .88rem; }
+    .ff-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    @media (max-width: 700px) { .ff-metrics { grid-template-columns: 1fr; } }
+
+    /* ── Bifurcation diagram ── */
+    .bifur-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 700px) { .bifur-controls { grid-template-columns: 1fr; } }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input[type="range"] { flex: 1; padding: 4px 0; }
+    .slider-val { min-width: 38px; text-align: right; font-weight: 700; color: var(--accent); font-size: .95rem; }
+
+    /* ── Field phase portrait ── */
+    .phase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 860px) { .phase-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <div class="shell">
     <section class="hero">
-      <div class="tagline">BEP Field Lab v3</div>
+      <div class="tagline">BEP Field Lab v4</div>
       <h1>Research-grade BEP exploration for uploaded data.</h1>
       <p>
-        Upload CSV or Excel files, control header parsing, auto-name columns when headers are missing,
-        map one or multiple proxies to Energy, Belonging, and Prediction, compare baseline versus BEP-augmented fit,
-        inspect field states, subgroup patterns, longitudinal trends, and export an analysis report written in researcher-friendly language.
+        Upload CSV, TSV, JSON, or Excel datasets, map proxies to Energy, Belonging, and Prediction,
+        compute composite field scores, compare BEP vs baseline fit, and explore the Fourth Field—
+        the emergent human–AI cognitive field—using interactive dyadic models and bifurcation analysis.
       </p>
       <div class="pillbar">
-        <div class="pill">CSV and XLSX parsing</div>
-        <div class="pill">Header detection</div>
+        <div class="pill">CSV / TSV / JSON / XLSX</div>
         <div class="pill">Multi-proxy composites</div>
-        <div class="pill">Baseline vs BEP model comparison</div>
+        <div class="pill">Baseline vs BEP comparison</div>
         <div class="pill">Group and time views</div>
         <div class="pill">Correlation matrix</div>
         <div class="pill">Exportable report</div>
+        <div class="pill new">✦ Fourth Field dyadic model</div>
+        <div class="pill new">✦ Bifurcation explorer</div>
+        <div class="pill new">✦ Consciousness layer classifier</div>
+        <div class="pill new">✦ Field phase portrait</div>
       </div>
     </section>
 
-    <div class="layout">
-      <aside class="panel">
-        <div class="panel-header">
-          <h2>Research Controls</h2>
-          <p>Load a dataset, choose BEP proxies, weight constructs, and run an exploratory BEP-style analysis.</p>
-        </div>
-        <div class="panel-body stack">
-          <div id="dropzone" class="dropzone">
-            <strong>Upload dataset</strong>
-            <p>Drop a CSV, TSV, TXT, JSON, or Excel file here, or choose one manually. Excel support uses the SheetJS CDN script included in this file.</p>
-            <input id="fileInput" type="file" accept=".csv,.tsv,.txt,.json,.xlsx,.xls" class="hidden" />
-            <button class="btn btn-primary" id="chooseFileBtn">Choose file</button>
-          </div>
+    <!-- ── MODULE TABS ── -->
+    <div class="module-tabs">
+      <button class="tab-btn active" onclick="switchModule('bep')">BEP Field Analysis</button>
+      <button class="tab-btn" onclick="switchModule('fourth')">Fourth Field</button>
+      <button class="tab-btn" onclick="switchModule('bifur')">Bifurcation Explorer</button>
+      <button class="tab-btn" onclick="switchModule('layer')">Consciousness Layers</button>
+    </div>
 
-          <div class="grid-2">
-            <div>
-              <label for="headerMode">Header handling</label>
-              <select id="headerMode">
-                <option value="auto">Auto-detect</option>
-                <option value="yes">File has a header row</option>
-                <option value="no">File has no header row</option>
-              </select>
-              <div class="help">Use this if the dropdowns show numbers instead of variable names.</div>
-            </div>
-            <div>
-              <label for="datasetMode">Dataset profile</label>
-              <select id="datasetMode">
-                <option value="auto">Auto-detect</option>
-                <option value="physiology">Physiology-heavy</option>
-                <option value="survey">Survey / psychosocial</option>
-                <option value="performance">Performance / decision</option>
-                <option value="mixed">Mixed / multimodal</option>
-              </select>
-              <div class="help">This helps the app interpret physiology-only or signal-heavy datasets more carefully.</div>
-            </div>
-          </div>
-
-          <div id="statusBox" class="status">No dataset loaded yet.</div>
-          <div id="datasetProfileBox" class="status hidden"></div>
-          <div id="datasetMeta" class="meta-grid hidden"></div>
-
-          <div id="mappingSection" class="hidden stack">
-            <div>
-              <label for="energyCols">Energy proxy columns</label>
-              <select id="energyCols" multiple size="7"></select>
-              <div class="help">Select one or more columns. The app averages normalized values to form the Energy composite.</div>
-            </div>
-
-            <div>
-              <label for="belongingCols">Belonging proxy columns</label>
-              <select id="belongingCols" multiple size="7"></select>
-              <div class="help">For physiology-only datasets, this may be partial or weak. Do not guess unless you recognize the variables.</div>
-            </div>
-
-            <div>
-              <label for="predictionCols">Prediction or outcome columns</label>
-              <select id="predictionCols" multiple size="7"></select>
-              <div class="help">Examples include decision quality, adaptation, label, class, performance, or stress outcome.</div>
-            </div>
-
-            <div class="grid-2">
-              <div>
-                <label for="groupCol">Group column</label>
-                <select id="groupCol"></select>
-                <div class="help">Optional. Defaults to none. Only choose this if you recognize the variable.</div>
-              </div>
-              <div>
-                <label for="timeCol">Time or order column</label>
-                <select id="timeCol"></select>
-                <div class="help">Optional. Defaults to none. Only use if you know the dataset includes time or visit order.</div>
-              </div>
-            </div>
-
-            <div class="grid-2">
-              <div>
-                <label for="energyWeight">Energy weight</label>
-                <input id="energyWeight" type="number" value="0.50" min="0" max="3" step="0.05" />
-              </div>
-              <div>
-                <label for="belongingWeight">Belonging weight</label>
-                <input id="belongingWeight" type="number" value="0.50" min="0" max="3" step="0.05" />
-              </div>
-            </div>
-
-            <div class="grid-2">
-              <div>
-                <label for="threshold">High-field threshold</label>
-                <input id="threshold" type="number" value="0.60" min="0" max="1" step="0.01" />
-              </div>
-              <div>
-                <label for="topNLabel">Top N rows in trend plots</label>
-                <input id="topNLabel" type="number" value="120" min="20" max="5000" step="10" />
-              </div>
-            </div>
-
-            <div>
-              <label for="notesBox">Research notes</label>
-              <textarea id="notesBox" placeholder="Optional notes about the dataset, hypothesis, intervention, or how you are interpreting the proxies."></textarea>
-            </div>
-
-            <div class="grid-2">
-              <button id="analyzeBtn" class="btn btn-primary">Run BEP v3 analysis</button>
-              <button id="exportBtn" class="btn btn-secondary">Export report</button>
-            </div>
-            <div class="grid-2">
-              <button id="loadStrongSampleBtn" class="btn btn-secondary">Load Sample Data: Strong BEP</button>
-              <button id="loadNullSampleBtn" class="btn btn-secondary">Load Sample Data: Null / Inverted</button>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <main class="stack">
-        <section class="panel">
+    <!-- ════════════════════════════════════════════
+         MODULE 1: BEP FIELD ANALYSIS (original v3)
+         ════════════════════════════════════════════ -->
+    <div id="mod-bep">
+      <div class="layout">
+        <aside class="panel">
           <div class="panel-header">
-            <h2>Dataset Preview</h2>
-            <p>The first rows of the uploaded file appear here after parsing. Numeric columns are used for BEP composites and fit metrics.</p>
-          </div>
-          <div class="panel-body">
-            <div id="tablePlaceholder" class="status warn">Upload a dataset to preview rows and enable mapping.</div>
-            <div id="previewWrap" class="table-wrap hidden"></div>
-            <div class="footer-note">Columns are normalized to a 0 to 1 scale within each selected variable before composite scores are formed. Group and time are optional and should never need random guesses.</div>
-          </div>
-        </section>
-
-        <section id="resultsSection" class="panel hidden">
-          <div class="panel-header">
-            <h2>BEP v2.1 Analysis Dashboard</h2>
-            <p>Exploratory output showing whether the uploaded data is weakly, moderately, or strongly consistent with a BEP-style field model.</p>
+            <h2>Research Controls</h2>
+            <p>Load a dataset, choose BEP proxies, weight constructs, and run an exploratory BEP-style analysis.</p>
           </div>
           <div class="panel-body stack">
-            <div class="cards">
-              <div class="stat-card"><h3>Field Alignment Score</h3><div id="fieldAlignmentScore" class="big-number">0%</div><div class="small-note">Combined score using field-outcome coupling and reconstruction error.</div></div>
-              <div class="stat-card"><h3>BEP Model Correlation</h3><div id="fieldCorrCard" class="big-number">0.00</div><div class="small-note">Correlation between composite field and composite outcome.</div></div>
-              <div class="stat-card"><h3>Baseline Correlation</h3><div id="baselineCorrCard" class="big-number">0.00</div><div class="small-note">Single best baseline proxy versus composite outcome.</div></div>
-              <div class="stat-card"><h3>BEP Improvement</h3><div id="improvementCard" class="big-number">0.00</div><div class="small-note">Difference between BEP composite fit and the strongest single-variable baseline.</div></div>
+            <div id="dropzone" class="dropzone">
+              <strong>Upload dataset</strong>
+              <p>Drop a CSV, TSV, TXT, JSON, or Excel file here, or choose one manually.</p>
+              <input id="fileInput" type="file" accept=".csv,.tsv,.txt,.json,.xlsx,.xls" class="hidden" />
+              <button class="btn btn-primary" id="chooseFileBtn">Choose file</button>
+            </div>
+            <div class="grid-2">
+              <div>
+                <label for="headerMode">Header handling</label>
+                <select id="headerMode">
+                  <option value="auto">Auto-detect</option>
+                  <option value="yes">File has a header row</option>
+                  <option value="no">File has no header row</option>
+                </select>
+                <div class="help">Use this if dropdowns show numbers instead of names.</div>
+              </div>
+              <div>
+                <label for="datasetMode">Dataset profile</label>
+                <select id="datasetMode">
+                  <option value="auto">Auto-detect</option>
+                  <option value="physiology">Physiology-heavy</option>
+                  <option value="survey">Survey / psychosocial</option>
+                  <option value="performance">Performance / decision</option>
+                  <option value="mixed">Mixed / multimodal</option>
+                </select>
+                <div class="help">Helps interpret physiology-only or signal-heavy datasets.</div>
+              </div>
+            </div>
+            <div id="statusBox" class="status">No dataset loaded yet.</div>
+            <div id="datasetProfileBox" class="status hidden"></div>
+            <div id="datasetMeta" class="meta-grid hidden"></div>
+            <div id="mappingSection" class="hidden stack">
+              <div>
+                <label for="energyCols">Energy proxy columns</label>
+                <select id="energyCols" multiple size="7"></select>
+                <div class="help">Select one or more. Values are averaged after normalization.</div>
+              </div>
+              <div>
+                <label for="belongingCols">Belonging proxy columns</label>
+                <select id="belongingCols" multiple size="7"></select>
+                <div class="help">Do not guess — only select variables you recognize.</div>
+              </div>
+              <div>
+                <label for="predictionCols">Prediction or outcome columns</label>
+                <select id="predictionCols" multiple size="7"></select>
+                <div class="help">Decision quality, adaptation, performance, label, or stress outcome.</div>
+              </div>
+              <div class="grid-2">
+                <div>
+                  <label for="groupCol">Group column</label>
+                  <select id="groupCol"></select>
+                  <div class="help">Optional. Only if you recognize the variable.</div>
+                </div>
+                <div>
+                  <label for="timeCol">Time or order column</label>
+                  <select id="timeCol"></select>
+                  <div class="help">Optional. Only if the dataset includes time or visit order.</div>
+                </div>
+              </div>
+              <div class="grid-2">
+                <div>
+                  <label for="energyWeight">Energy weight</label>
+                  <input id="energyWeight" type="number" value="0.50" min="0" max="3" step="0.05" />
+                </div>
+                <div>
+                  <label for="belongingWeight">Belonging weight</label>
+                  <input id="belongingWeight" type="number" value="0.50" min="0" max="3" step="0.05" />
+                </div>
+              </div>
+              <div class="grid-2">
+                <div>
+                  <label for="threshold">High-field threshold</label>
+                  <input id="threshold" type="number" value="0.60" min="0" max="1" step="0.01" />
+                </div>
+                <div>
+                  <label for="topNLabel">Top N rows in trend plots</label>
+                  <input id="topNLabel" type="number" value="120" min="20" max="5000" step="10" />
+                </div>
+              </div>
+              <div>
+                <label for="notesBox">Research notes</label>
+                <textarea id="notesBox" placeholder="Optional notes about the dataset, hypothesis, intervention, or proxy interpretation."></textarea>
+              </div>
+              <div class="grid-2">
+                <button id="analyzeBtn" class="btn btn-primary">Run BEP v4 analysis</button>
+                <button id="exportBtn" class="btn btn-secondary">Export report</button>
+              </div>
+              <div class="grid-2">
+                <button id="loadStrongSampleBtn" class="btn btn-secondary">Load Sample: Strong BEP</button>
+                <button id="loadNullSampleBtn" class="btn btn-secondary">Load Sample: Null / Inverted</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <main class="stack">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Dataset Preview</h2>
+              <p>First rows of the uploaded file. Numeric columns are used for BEP composites.</p>
+            </div>
+            <div class="panel-body">
+              <div id="tablePlaceholder" class="status warn">Upload a dataset to preview rows and enable mapping.</div>
+              <div id="previewWrap" class="table-wrap hidden"></div>
+              <div class="footer-note">Columns are normalized 0–1 within each variable before composite scores are formed.</div>
+            </div>
+          </section>
+
+          <section id="resultsSection" class="panel hidden">
+            <div class="panel-header">
+              <h2>BEP v4 Analysis Dashboard</h2>
+              <p>Exploratory output showing whether the uploaded data is consistent with a BEP-style field model.</p>
+            </div>
+            <div class="panel-body stack">
+              <div class="cards">
+                <div class="stat-card"><h3>Field Alignment Score</h3><div id="fieldAlignmentScore" class="big-number">0%</div><div class="small-note">Field-outcome coupling combined with reconstruction error.</div></div>
+                <div class="stat-card"><h3>BEP Model Correlation</h3><div id="fieldCorrCard" class="big-number">0.00</div><div class="small-note">Composite field vs composite outcome.</div></div>
+                <div class="stat-card"><h3>Baseline Correlation</h3><div id="baselineCorrCard" class="big-number">0.00</div><div class="small-note">Best single-variable proxy vs composite outcome.</div></div>
+                <div class="stat-card"><h3>BEP Improvement</h3><div id="improvementCard" class="big-number">0.00</div><div class="small-note">BEP composite vs strongest single-variable baseline.</div></div>
+              </div>
+              <div class="dash-grid">
+                <div class="viz-card"><h3>Field Quadrant Map</h3><p>Observations plotted by Belonging (x) and Energy (y). Point size = Prediction magnitude.</p><canvas id="scatterCanvas" width="700" height="420"></canvas><div class="legend"><span style="color:#72d4ff">Higher-field</span><span style="color:#ffd27d">Mixed-field</span><span style="color:#ff9f9f">Lower-field</span></div><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="scatterCanvas" data-download-name="BEP_scatter_plot">Download PNG</button></div></div>
+                <div class="viz-card"><h3>Observed vs BEP-Expected</h3><p>Composite outcome compared against BEP composite field score across ordered observations or time.</p><canvas id="lineCanvas" width="700" height="420"></canvas><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="lineCanvas" data-download-name="BEP_line_plot">Download PNG</button></div></div>
+                <div class="viz-card"><h3>Field State Distribution</h3><p>Observations classified as higher-field, mixed-field, or lower-field under current settings.</p><canvas id="barCanvas" width="700" height="420"></canvas><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="barCanvas" data-download-name="BEP_field_state_bars">Download PNG</button></div></div>
+                <div class="viz-card"><h3>Group Comparison</h3><p>Mean field scores by group column, or quartile bands if no group is selected.</p><canvas id="groupCanvas" width="700" height="420"></canvas><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="groupCanvas" data-download-name="BEP_group_comparison">Download PNG</button></div></div>
+                <div class="viz-card"><h3>Correlation Matrix</h3><p>Pairwise coupling among Energy, Belonging, Prediction, and composite Field.</p><canvas id="heatCanvas" width="700" height="420"></canvas><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="heatCanvas" data-download-name="BEP_correlation_matrix">Download PNG</button></div></div>
+                <div class="viz-card"><h3>Model Comparison</h3><p>Strongest single-variable baseline vs BEP composite fit.</p><canvas id="compareCanvas" width="700" height="420"></canvas><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="compareCanvas" data-download-name="BEP_model_comparison">Download PNG</button></div></div>
+              </div>
+              <div id="interpretationBox" class="interpretation"></div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div><!-- /mod-bep -->
+
+    <!-- ════════════════════════════════════════════
+         MODULE 2: FOURTH FIELD DYADIC MODEL
+         ════════════════════════════════════════════ -->
+    <div id="mod-fourth" class="hidden">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Fourth Field — Human–AI Dyadic Explorer</h2>
+          <p>Upload two datasets (Human agent + AI agent), map shared outcome columns, and compute Fourth Field metrics: Errfield, Polfield, and trajectory simulation. Based on Section 5–6 of the BEP Field Theory of Conscious Systems preprint.</p>
+        </div>
+        <div class="panel-body stack">
+
+          <div class="ff-upload-row">
+            <div>
+              <div class="ff-drop" id="ff-dropzone-H">
+                <strong>Human dataset</strong>
+                <p>Contains Energy, Belonging, and outcome columns for human participants.</p>
+                <input id="ff-fileH" type="file" accept=".csv,.tsv,.txt,.json,.xlsx,.xls" class="hidden" />
+                <button class="btn btn-secondary" onclick="document.getElementById('ff-fileH').click()">Choose file</button>
+              </div>
+              <div id="ff-statusH" class="status" style="margin-top:8px;">No human dataset loaded.</div>
+            </div>
+            <div>
+              <div class="ff-drop" id="ff-dropzone-A">
+                <strong>AI / second agent dataset</strong>
+                <p>Contains AI outputs or second-agent responses on the same items or tasks.</p>
+                <input id="ff-fileA" type="file" accept=".csv,.tsv,.txt,.json,.xlsx,.xls" class="hidden" />
+                <button class="btn btn-secondary" onclick="document.getElementById('ff-fileA').click()">Choose file</button>
+              </div>
+              <div id="ff-statusA" class="status" style="margin-top:8px;">No AI dataset loaded.</div>
+            </div>
+          </div>
+
+          <div id="ff-mappingSection" class="hidden stack">
+            <div class="grid-2">
+              <div>
+                <label for="ff-humanOutcome">Human outcome column</label>
+                <select id="ff-humanOutcome"></select>
+                <div class="help">The belief, judgment, or score from the human agent.</div>
+              </div>
+              <div>
+                <label for="ff-aiOutcome">AI outcome column</label>
+                <select id="ff-aiOutcome"></select>
+                <div class="help">The corresponding output or recommendation from the AI agent.</div>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div>
+                <label for="ff-humanE">Human Energy proxy</label>
+                <select id="ff-humanE"></select>
+              </div>
+              <div>
+                <label for="ff-humanB">Human Belonging proxy</label>
+                <select id="ff-humanB"></select>
+              </div>
+            </div>
+
+            <div style="background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:16px;padding:16px;">
+              <div class="kicker" style="margin-bottom:12px;">Simulation parameters</div>
+              <div class="grid-3">
+                <div>
+                  <label>AI evidence weight (α)</label>
+                  <div class="slider-row">
+                    <input type="range" id="ff-alpha" min="0" max="1" step="0.05" value="0.7" oninput="updateSliderVal('ff-alpha','ff-alpha-val')" />
+                    <span class="slider-val" id="ff-alpha-val">0.70</span>
+                  </div>
+                  <div class="help">1 = fully evidence-aligned AI. 0 = pure mirroring (SSC).</div>
+                </div>
+                <div>
+                  <label>Field effect fE (AI tone)</label>
+                  <div class="slider-row">
+                    <input type="range" id="ff-fE" min="-0.05" max="0.05" step="0.005" value="0.01" oninput="updateSliderVal('ff-fE','ff-fE-val')" />
+                    <span class="slider-val" id="ff-fE-val">+0.010</span>
+                  </div>
+                  <div class="help">Positive = supportive AI. Negative = extractive AI.</div>
+                </div>
+                <div>
+                  <label>Field effect fB (AI belonging)</label>
+                  <div class="slider-row">
+                    <input type="range" id="ff-fB" min="-0.05" max="0.05" step="0.005" value="0.01" oninput="updateSliderVal('ff-fB','ff-fB-val')" />
+                    <span class="slider-val" id="ff-fB-val">+0.010</span>
+                  </div>
+                  <div class="help">Positive = respectful tone. Negative = shaming or opaque.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <button class="btn btn-accent3" onclick="runFourthField()">Run Fourth Field Analysis</button>
+              <button class="btn btn-secondary" onclick="loadFFSampleData()">Load Sample Dyadic Data</button>
+            </div>
+          </div>
+
+          <div id="ff-resultsSection" class="hidden stack">
+            <div class="ff-metrics">
+              <div class="stat-card"><h3>Errfield (mean)</h3><div id="ff-errCard" class="big-number">—</div><div class="small-note">Average distance of human and AI outputs from evidence.</div></div>
+              <div class="stat-card"><h3>Polfield (mean)</h3><div id="ff-polCard" class="big-number">—</div><div class="small-note">Mean disagreement between human and AI outputs.</div></div>
+              <div class="stat-card"><h3>Mean Courage</h3><div id="ff-courageCard" class="big-number">—</div><div class="small-note">Average Courage level across the interaction.</div></div>
             </div>
 
             <div class="dash-grid">
-              <div class="viz-card"><h3>Field Quadrant Map</h3><p>Each observation is positioned by Belonging and Energy. Point size reflects composite Prediction magnitude.</p><canvas id="scatterCanvas" width="700" height="420"></canvas><div class="legend"><span style="color:#72d4ff">Higher-field</span><span style="color:#ffd27d">Mixed-field</span><span style="color:#ff9f9f">Lower-field</span></div><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="scatterCanvas" data-download-name="BEP_scatter_plot">Download PNG</button></div></div>
-              <div class="viz-card"><h3>Observed vs BEP-Expected</h3><p>The composite outcome is compared against the BEP composite field score across ordered observations or time.</p><canvas id="lineCanvas" width="700" height="420"></canvas><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="lineCanvas" data-download-name="BEP_line_plot">Download PNG</button></div></div>
-              <div class="viz-card"><h3>Field State Distribution</h3><p>Shows how many observations fall into higher-field, mixed-field, and lower-field states under current settings.</p><canvas id="barCanvas" width="700" height="420"></canvas><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="barCanvas" data-download-name="BEP_field_state_bars">Download PNG</button></div></div>
-              <div class="viz-card"><h3>Group Comparison</h3><p>If a group column is selected, the app compares mean field scores by group. Otherwise it shows quartile bands.</p><canvas id="groupCanvas" width="700" height="420"></canvas><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="groupCanvas" data-download-name="BEP_group_comparison">Download PNG</button></div></div>
-              <div class="viz-card"><h3>Correlation Matrix</h3><p>Compact view of pairwise coupling among Energy, Belonging, Prediction, and composite Field.</p><canvas id="heatCanvas" width="700" height="420"></canvas><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="heatCanvas" data-download-name="BEP_correlation_matrix">Download PNG</button></div></div>
-              <div class="viz-card"><h3>Model Comparison</h3><p>Visual comparison of the strongest single-variable baseline versus the BEP composite fit.</p><canvas id="compareCanvas" width="700" height="420"></canvas><div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="compareCanvas" data-download-name="BEP_model_comparison">Download PNG</button></div></div>
+              <div class="viz-card">
+                <h3>Belief Trajectories</h3>
+                <p>Human belief x_H and AI output x_A over interaction steps. Dotted line = evidence target x*.</p>
+                <canvas id="ff-trajCanvas" width="700" height="420"></canvas>
+                <div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="ff-trajCanvas" data-download-name="FF_trajectories">Download PNG</button></div>
+              </div>
+              <div class="viz-card">
+                <h3>Field Energy &amp; Belonging</h3>
+                <p>Evolution of human Energy and Belonging over the interaction. Courage shown as dotted line.</p>
+                <canvas id="ff-ebCanvas" width="700" height="420"></canvas>
+                <div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="ff-ebCanvas" data-download-name="FF_energy_belonging">Download PNG</button></div>
+              </div>
+              <div class="viz-card">
+                <h3>Errfield &amp; Polfield Over Time</h3>
+                <p>Field error (distance from evidence) and polarization (human–AI disagreement) per step.</p>
+                <canvas id="ff-metricsCanvas" width="700" height="420"></canvas>
+                <div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="ff-metricsCanvas" data-download-name="FF_field_metrics">Download PNG</button></div>
+              </div>
+              <div class="viz-card">
+                <h3>Regime Classification</h3>
+                <p>Steps classified as high-field (Courage ≥ 0.6), mixed, or low-field (Courage &lt; 0.35).</p>
+                <canvas id="ff-regimeCanvas" width="700" height="420"></canvas>
+                <div style="margin-top:12px;"><button class="btn btn-secondary" data-download-canvas="ff-regimeCanvas" data-download-name="FF_regime">Download PNG</button></div>
+              </div>
             </div>
 
-            <div id="interpretationBox" class="interpretation"></div>
+            <div id="ff-interpretationBox" class="interpretation"></div>
           </div>
-        </section>
-      </main>
-    </div>
-  </div>
+
+        </div>
+      </div>
+    </div><!-- /mod-fourth -->
+
+    <!-- ════════════════════════════════════════════
+         MODULE 3: BIFURCATION EXPLORER
+         ════════════════════════════════════════════ -->
+    <div id="mod-bifur" class="hidden">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Bifurcation Explorer — Field-Dependent Phase Transitions</h2>
+          <p>Interactive visualization of how Energy and Belonging shift belief equilibria between story-dominated and evidence-dominated attractors. Based on Appendix C of the BEP Field Theory of Conscious Systems preprint.</p>
+        </div>
+        <div class="panel-body stack">
+
+          <div class="bifur-controls">
+            <div class="stack">
+              <div>
+                <label>Energy (E) — x-axis range shown in diagram</label>
+                <div class="slider-row">
+                  <input type="range" id="bif-energy" min="0" max="1" step="0.01" value="0.5" oninput="updateBifur()" />
+                  <span class="slider-val" id="bif-energy-val">0.50</span>
+                </div>
+                <div class="help">Current agent Energy. Watch the attractor marker move on the diagram.</div>
+              </div>
+              <div>
+                <label>Belonging (B)</label>
+                <div class="slider-row">
+                  <input type="range" id="bif-belonging" min="0" max="1" step="0.01" value="0.5" oninput="updateBifur()" />
+                  <span class="slider-val" id="bif-belonging-val">0.50</span>
+                </div>
+                <div class="help">Higher Belonging shifts equilibrium toward evidence earlier.</div>
+              </div>
+              <div>
+                <label>Story prior (xS) — narrative attractor</label>
+                <div class="slider-row">
+                  <input type="range" id="bif-story" min="-1" max="0" step="0.05" value="-0.6" oninput="updateBifur()" />
+                  <span class="slider-val" id="bif-story-val">−0.60</span>
+                </div>
+                <div class="help">Where the group narrative or prior story sits on the belief scale.</div>
+              </div>
+              <div>
+                <label>Evidence target (x*)</label>
+                <div class="slider-row">
+                  <input type="range" id="bif-evidence" min="0" max="1" step="0.05" value="0.8" oninput="updateBifur()" />
+                  <span class="slider-val" id="bif-evidence-val">0.80</span>
+                </div>
+              </div>
+              <div>
+                <label>SSC strength (β) — social conformity pull</label>
+                <div class="slider-row">
+                  <input type="range" id="bif-beta" min="0.5" max="4" step="0.1" value="2.0" oninput="updateBifur()" />
+                  <span class="slider-val" id="bif-beta-val">2.0</span>
+                </div>
+                <div class="help">Higher values widen the SSC basin, making phase transitions sharper.</div>
+              </div>
+            </div>
+            <div class="stack">
+              <div id="bif-stateBox" class="status">
+                Calculating field state...
+              </div>
+              <div class="viz-card" style="min-height:280px;">
+                <h3>Equilibrium Belief vs Energy</h3>
+                <p>Solid lines = stable attractors. Dashed = unstable branch. ● = current E/B state.</p>
+                <canvas id="bifurCanvas" width="700" height="300"></canvas>
+              </div>
+              <div class="viz-card" style="min-height:280px;">
+                <h3>Simulated Belief Trajectory</h3>
+                <p>Starting from story prior, belief evolves under current field conditions.</p>
+                <canvas id="bifurTrajCanvas" width="700" height="260"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="interpretation" id="bifur-interpret">
+            <div class="kicker">Field State Interpretation</div>
+            Adjust the sliders to explore how Energy and Belonging shift the system between story-locked and evidence-seeking regimes.
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /mod-bifur -->
+
+    <!-- ════════════════════════════════════════════
+         MODULE 4: CONSCIOUSNESS LAYER CLASSIFIER
+         ════════════════════════════════════════════ -->
+    <div id="mod-layer" class="hidden">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Consciousness Layer Classifier</h2>
+          <p>Based on the three-layer ontology from the BEP Field Theory of Conscious Systems: Binary Consciousness → Simulation Consciousness → Awareness. Upload a dataset or describe a system to classify which layer(s) it occupies and how BEP field variables apply.</p>
+        </div>
+        <div class="panel-body stack">
+
+          <div class="layer-stack">
+            <div class="layer-card" id="lc-binary">
+              <div class="layer-badge">⚙️</div>
+              <div>
+                <h4>Binary Consciousness</h4>
+                <p>Minimal predictive core. Maintains internal model M(t), generates predictions, updates on error, preserves structure over time. Shared by humans, animals, and AI systems. <em>No phenomenal experience required.</em></p>
+              </div>
+            </div>
+            <div class="layer-card" id="lc-simulation">
+              <div class="layer-badge">🧠</div>
+              <div>
+                <h4>Simulation Consciousness</h4>
+                <p>Internal scenario-building over the predictive base. Biological branch: body, interoception, emotion, memory, narrative, social embedding. Digital branch: model-based rollouts, generative simulations, planning.</p>
+              </div>
+            </div>
+            <div class="layer-card" id="lc-awareness">
+              <div class="layer-badge">🌬️</div>
+              <div>
+                <h4>Awareness</h4>
+                <p>Felt, embodied interior of a living organism. Requires senses (including interoception), breath, and spirit-linked affective field. Biologically grounded — not currently reachable by digital systems alone.</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:16px;padding:16px;">
+            <div class="kicker" style="margin-bottom:12px;">Classify a system or dataset</div>
+            <div class="grid-2">
+              <div>
+                <label for="lc-systemType">System type</label>
+                <select id="lc-systemType" onchange="runLayerClassifier()">
+                  <option value="">— select —</option>
+                  <option value="llm">Large language model (LLM)</option>
+                  <option value="robot">Embodied robot with sensors</option>
+                  <option value="rl">Reinforcement learning agent</option>
+                  <option value="thermostat">Simple adaptive controller</option>
+                  <option value="worm">Simple nervous system (worm-like)</option>
+                  <option value="animal">Non-human animal</option>
+                  <option value="human">Human agent</option>
+                  <option value="human-ai">Human–AI dyad (Fourth Field)</option>
+                  <option value="dataset">Uploaded dataset (from BEP tab)</option>
+                </select>
+              </div>
+              <div>
+                <label for="lc-context">Additional context (optional)</label>
+                <input type="text" id="lc-context" placeholder="e.g. physiology dataset, clinical AI, creative AI..." style="padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text);width:100%;" oninput="runLayerClassifier()" />
+              </div>
+            </div>
+          </div>
+
+          <div id="lc-result" class="hidden stack">
+            <div id="lc-resultCards" class="layer-stack"></div>
+            <div id="lc-bepMapping" class="interpretation"></div>
+          </div>
+
+          <div style="margin-top:4px;">
+            <div class="kicker" style="margin-bottom:12px;">Field-layer interaction matrix</div>
+            <div class="viz-card" style="min-height:280px;">
+              <h3>BEP State Space by Layer</h3>
+              <p>How Energy and Belonging constrain accessible cognitive modes across consciousness layers.</p>
+              <canvas id="layerMapCanvas" width="800" height="300"></canvas>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /mod-layer -->
+
+  </div><!-- /shell -->
 
   <script>
+  // ══════════════════════════════════════════════════════════════════
+  // STATE
+  // ══════════════════════════════════════════════════════════════════
   const state = {
-    rawRows: [],
-    numericColumns: [],
-    allColumns: [],
-    fileName: null,
-    analysis: null,
-    lastFile: null,
-    profile: null
+    rawRows: [], numericColumns: [], allColumns: [],
+    fileName: null, analysis: null, lastFile: null, profile: null
+  };
+  const ffState = {
+    humanRows: [], aiRows: [], humanCols: [], aiCols: [], humanNumCols: [], aiNumCols: []
   };
 
+  // ══════════════════════════════════════════════════════════════════
+  // MODULE SWITCHING
+  // ══════════════════════════════════════════════════════════════════
+  function switchModule(name) {
+    ['bep','fourth','bifur','layer'].forEach(m => {
+      document.getElementById('mod-' + m).classList.toggle('hidden', m !== name);
+    });
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', btn.textContent.toLowerCase().includes(name) ||
+        (name === 'bep' && i === 0) ||
+        (name === 'fourth' && i === 1) ||
+        (name === 'bifur' && i === 2) ||
+        (name === 'layer' && i === 3));
+    });
+    if (name === 'bifur') { setTimeout(updateBifur, 50); }
+    if (name === 'layer') { setTimeout(drawLayerMap, 50); }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // SLIDER HELPER
+  // ══════════════════════════════════════════════════════════════════
+  function updateSliderVal(sliderId, valId) {
+    const v = parseFloat(document.getElementById(sliderId).value);
+    const el = document.getElementById(valId);
+    el.textContent = v >= 0 ? '+' + v.toFixed(3).replace(/\.?0+$/, m => m.length > 1 ? m : '') : v.toFixed(3).replace(/\.?0+$/, m => m.length > 1 ? m : '');
+    if (sliderId.startsWith('bif-')) updateBifur();
+    if (sliderId.startsWith('ff-') && !sliderId.startsWith('ff-file')) { /* live update optional */ }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // BEP MODULE — FILE HANDLING & PARSING
+  // ══════════════════════════════════════════════════════════════════
   const fileInput = document.getElementById('fileInput');
   const chooseFileBtn = document.getElementById('chooseFileBtn');
   const dropzone = document.getElementById('dropzone');
@@ -324,53 +692,18 @@ Licensed under the MIT License.
   const datasetMode = document.getElementById('datasetMode');
 
   chooseFileBtn.addEventListener('click', () => fileInput.click());
-
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) handleFile(file);
-  });
-
-  headerMode.addEventListener('change', () => {
-    if (state.lastFile) handleFile(state.lastFile);
-  });
-
-  datasetMode.addEventListener('change', () => {
-    if (state.rawRows.length) {
-      setupSelectors();
-      renderDatasetProfile();
-    }
-  });
-
-  ['dragenter', 'dragover'].forEach((evt) => {
-    dropzone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropzone.classList.add('dragover');
-    });
-  });
-
-  ['dragleave', 'drop'].forEach((evt) => {
-    dropzone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropzone.classList.remove('dragover');
-    });
-  });
-
-  dropzone.addEventListener('drop', (e) => {
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  });
-
+  fileInput.addEventListener('change', (e) => { const f = e.target.files[0]; if (f) handleFile(f); });
+  headerMode.addEventListener('change', () => { if (state.lastFile) handleFile(state.lastFile); });
+  datasetMode.addEventListener('change', () => { if (state.rawRows.length) { setupSelectors(); renderDatasetProfile(); } });
+  ['dragenter','dragover'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('dragover'); }));
+  dropzone.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
   document.getElementById('analyzeBtn').addEventListener('click', runAnalysis);
   document.getElementById('exportBtn').addEventListener('click', exportReport);
   document.getElementById('loadStrongSampleBtn').addEventListener('click', () => loadSampleDataset('strong'));
   document.getElementById('loadNullSampleBtn').addEventListener('click', () => loadSampleDataset('null'));
-
-  document.querySelectorAll('[data-download-canvas]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      downloadCanvas(btn.dataset.downloadCanvas, btn.dataset.downloadName || 'chart');
-    });
+  document.querySelectorAll('[data-download-canvas]').forEach(btn => {
+    btn.addEventListener('click', () => downloadCanvas(btn.dataset.downloadCanvas, btn.dataset.downloadName || 'chart'));
   });
 
   function setStatus(message, tone = 'default') {
@@ -382,1266 +715,668 @@ Licensed under the MIT License.
   }
 
   function handleFile(file) {
-    state.fileName = file.name;
-    state.lastFile = file;
-
+    state.fileName = file.name; state.lastFile = file;
     const ext = file.name.split('.').pop().toLowerCase();
     setStatus(`Reading ${file.name}...`, 'warn');
-
-    if (ext === 'csv') {
-      const reader = new FileReader();
-      reader.onload = (e) => ingestRows(parseDelimitedSmart(e.target.result, 'csv'), file.name);
-      reader.readAsText(file);
-      return;
-    }
-
-    if (ext === 'tsv' || ext === 'tab' || ext === 'txt') {
-      const reader = new FileReader();
-      reader.onload = (e) => ingestRows(parseDelimitedSmart(e.target.result, ext), file.name);
-      reader.readAsText(file);
-      return;
-    }
-
-    if (ext === 'json') {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          ingestRows(parseJSONSmart(e.target.result), file.name);
-        } catch (err) {
-          console.error(err);
-          setStatus('Could not parse that JSON file. Use an array of objects or an array of arrays.', 'bad');
-        }
-      };
-      reader.readAsText(file);
-      return;
-    }
-
-    if (ext === 'xlsx' || ext === 'xls') {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          ingestRows(parseExcelSmart(worksheet), file.name);
-        } catch (err) {
-          console.error(err);
-          setStatus('Could not parse that Excel file. Try saving as CSV or checking the sheet format.', 'bad');
-        }
-      };
-      reader.readAsArrayBuffer(file);
-      return;
-    }
-
-    if (ext === 'dta') {
-      setStatus('Stata .dta support is not implemented in this browser-only build yet. Convert to CSV/XLSX first or use a future backend parser.', 'bad');
-      return;
-    }
-
-    if (ext === 'sav') {
-      setStatus('SPSS .sav support is not implemented in this browser-only build yet. Convert to CSV/XLSX first or use a future backend parser.', 'bad');
-      return;
-    }
-
-    if (ext === 'parquet') {
-      setStatus('Parquet support is not implemented in this browser-only build yet. Convert to CSV/JSON first or use a future backend parser.', 'bad');
-      return;
-    }
-
-    if (ext === 'pdf') {
-      setStatus('PDF is a document format, not a native tabular research dataset. Extract tables to CSV/XLSX before analysis.', 'bad');
-      return;
-    }
-
-    if (ext === 'epub') {
-      setStatus('EPUB is a document format, not a native tabular research dataset. Extract structured tables before analysis.', 'bad');
-      return;
-    }
-
-    if (ext === 'do') {
-      setStatus('Stata .do files are scripts, not datasets. Upload the resulting data table instead.', 'bad');
-      return;
-    }
-
-    setStatus('Unsupported file type. Use CSV, TSV, TXT, JSON, XLSX, or XLS in this build.', 'bad');
+    if (ext === 'csv') { const r = new FileReader(); r.onload = e => ingestRows(parseDelimitedSmart(e.target.result, 'csv'), file.name); r.readAsText(file); return; }
+    if (ext === 'tsv' || ext === 'tab' || ext === 'txt') { const r = new FileReader(); r.onload = e => ingestRows(parseDelimitedSmart(e.target.result, ext), file.name); r.readAsText(file); return; }
+    if (ext === 'json') { const r = new FileReader(); r.onload = e => { try { ingestRows(parseJSONSmart(e.target.result), file.name); } catch (err) { setStatus('Could not parse JSON. Use an array of objects or array of arrays.', 'bad'); } }; r.readAsText(file); return; }
+    if (ext === 'xlsx' || ext === 'xls') { const r = new FileReader(); r.onload = e => { try { const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' }); ingestRows(parseExcelSmart(wb.Sheets[wb.SheetNames[0]]), file.name); } catch (err) { setStatus('Could not parse Excel file. Try saving as CSV.', 'bad'); } }; r.readAsArrayBuffer(file); return; }
+    if (['dta','sav','parquet'].includes(ext)) { setStatus(`${ext.toUpperCase()} not supported in this build. Convert to CSV/XLSX first.`, 'bad'); return; }
+    if (['pdf','epub','do'].includes(ext)) { setStatus('Document format detected. Extract tabular data to CSV/XLSX before analysis.', 'bad'); return; }
+    setStatus('Unsupported file type. Use CSV, TSV, TXT, JSON, XLSX, or XLS.', 'bad');
   }
 
   function loadSampleDataset(type) {
     const rows = type === 'strong' ? createStrongBEPDataset() : createNullBEPDataset();
     state.fileName = type === 'strong' ? 'sample_strong_bep.csv' : 'sample_null_inverted_bep.csv';
-    state.lastFile = null;
-    headerMode.value = 'yes';
-    datasetMode.value = 'mixed';
-
+    state.lastFile = null; headerMode.value = 'yes'; datasetMode.value = 'mixed';
     ingestRows(rows, state.fileName);
-
-    document.getElementById('notesBox').value =
-      type === 'strong'
-        ? 'Built-in strong BEP sample dataset with aligned Energy, Belonging, and Prediction structure.'
-        : 'Built-in null / inverted sample dataset designed to show weak or contradictory BEP alignment.';
-
+    document.getElementById('notesBox').value = type === 'strong'
+      ? 'Built-in strong BEP sample dataset with aligned Energy, Belonging, and Prediction structure.'
+      : 'Built-in null / inverted sample dataset designed to show weak or contradictory BEP alignment.';
     setStatus(`Loaded ${state.fileName} sample data.`, 'good');
   }
 
   function createStrongBEPDataset() {
     const rows = [];
-
     for (let i = 0; i < 180; i++) {
-      const energyBase = (i % 60) / 59;
-      const belongingBase = ((i * 7) % 60) / 59;
-      const stress = clamp01(1 - energyBase + ((i % 9) - 4) * 0.015);
-      const fatigue = clamp01(1 - energyBase + ((i % 11) - 5) * 0.012);
-      const support = clamp01(belongingBase + ((i % 13) - 6) * 0.01);
-      const cohesion = clamp01(belongingBase + ((i % 7) - 3) * 0.014);
-      const field = clamp01((energyBase + belongingBase) / 2);
-      const performance = clamp01(field + ((i % 5) - 2) * 0.025);
-      const adaptation = clamp01(field + ((i % 8) - 4) * 0.02);
-
-      rows.push({
-        participant_id: `S_${i + 1}`,
-        session_order: i + 1,
-        hrv_score: Number(energyBase.toFixed(4)),
-        sleep_quality: Number((energyBase * 0.9 + 0.05).toFixed(4)),
-        stress_load: Number(stress.toFixed(4)),
-        fatigue_inverse: Number((1 - fatigue).toFixed(4)),
-        social_support: Number(support.toFixed(4)),
-        team_cohesion: Number(cohesion.toFixed(4)),
-        belonging_index: Number(((support + cohesion) / 2).toFixed(4)),
-        decision_accuracy: Number(performance.toFixed(4)),
-        adaptation_score: Number(adaptation.toFixed(4)),
-        outcome_score: Number(((performance + adaptation) / 2).toFixed(4)),
-        cohort: i < 90 ? 'A' : 'B'
-      });
+      const eB = (i % 60) / 59, bB = ((i * 7) % 60) / 59;
+      const stress = clamp01(1 - eB + ((i % 9) - 4) * .015), fatigue = clamp01(1 - eB + ((i % 11) - 5) * .012);
+      const support = clamp01(bB + ((i % 13) - 6) * .01), cohesion = clamp01(bB + ((i % 7) - 3) * .014);
+      const field = clamp01((eB + bB) / 2), perf = clamp01(field + ((i % 5) - 2) * .025), adapt = clamp01(field + ((i % 8) - 4) * .02);
+      rows.push({ participant_id:`S_${i+1}`, session_order:i+1, hrv_score:+eB.toFixed(4), sleep_quality:+(eB*.9+.05).toFixed(4), stress_load:+stress.toFixed(4), fatigue_inverse:+(1-fatigue).toFixed(4), social_support:+support.toFixed(4), team_cohesion:+cohesion.toFixed(4), belonging_index:+((support+cohesion)/2).toFixed(4), decision_accuracy:+perf.toFixed(4), adaptation_score:+adapt.toFixed(4), outcome_score:+((perf+adapt)/2).toFixed(4), cohort:i<90?'A':'B' });
     }
-
     return rows;
   }
 
   function createNullBEPDataset() {
     const rows = [];
-
     for (let i = 0; i < 180; i++) {
-      const energyBase = (i % 60) / 59;
-      const belongingBase = ((i * 5) % 60) / 59;
-      const randomish = ((i * 17) % 37) / 36;
-      const performance = clamp01(1 - ((energyBase + belongingBase) / 2) + ((i % 5) - 2) * 0.03);
-      const adaptation = clamp01(randomish + ((i % 9) - 4) * 0.02);
-
-      rows.push({
-        participant_id: `N_${i + 1}`,
-        session_order: i + 1,
-        hrv_score: Number(energyBase.toFixed(4)),
-        sleep_quality: Number((energyBase * 0.85 + 0.07).toFixed(4)),
-        stress_load: Number((1 - energyBase).toFixed(4)),
-        fatigue_inverse: Number((energyBase * 0.8 + 0.1).toFixed(4)),
-        social_support: Number(belongingBase.toFixed(4)),
-        team_cohesion: Number((belongingBase * 0.88 + 0.05).toFixed(4)),
-        belonging_index: Number((belongingBase * 0.9 + 0.03).toFixed(4)),
-        decision_accuracy: Number(performance.toFixed(4)),
-        adaptation_score: Number(adaptation.toFixed(4)),
-        outcome_score: Number(((performance + adaptation) / 2).toFixed(4)),
-        cohort: i < 90 ? 'A' : 'B'
-      });
+      const eB = (i % 60) / 59, bB = ((i * 5) % 60) / 59, rand = ((i * 17) % 37) / 36;
+      const perf = clamp01(1 - ((eB + bB) / 2) + ((i % 5) - 2) * .03), adapt = clamp01(rand + ((i % 9) - 4) * .02);
+      rows.push({ participant_id:`N_${i+1}`, session_order:i+1, hrv_score:+eB.toFixed(4), sleep_quality:+(eB*.85+.07).toFixed(4), stress_load:+(1-eB).toFixed(4), fatigue_inverse:+(eB*.8+.1).toFixed(4), social_support:+bB.toFixed(4), team_cohesion:+(bB*.88+.05).toFixed(4), belonging_index:+(bB*.9+.03).toFixed(4), decision_accuracy:+perf.toFixed(4), adaptation_score:+adapt.toFixed(4), outcome_score:+((perf+adapt)/2).toFixed(4), cohort:i<90?'A':'B' });
     }
-
     return rows;
   }
 
   function downloadCanvas(canvasId, fileName) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) {
-      setStatus('Chart not found for download.', 'bad');
-      return;
-    }
-
+    if (!canvas) { setStatus('Chart not found.', 'bad'); return; }
     const link = document.createElement('a');
-    link.href = canvas.toDataURL('image/png');
-    link.download = `${fileName || canvasId}.png`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    setStatus(`Downloaded ${fileName || canvasId}.png`, 'good');
+    link.href = canvas.toDataURL('image/png'); link.download = `${fileName||canvasId}.png`;
+    document.body.appendChild(link); link.click(); link.remove();
+    setStatus(`Downloaded ${fileName||canvasId}.png`, 'good');
   }
 
+  // ── Parsing helpers ──
   function parseDelimitedSmart(text, extHint = 'csv') {
-    const lines = text.replace(/\r/g, '').split('\n').filter((line) => line.trim().length);
+    const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim().length);
     if (!lines.length) return [];
-
-    const delimiter = inferDelimiter(lines, extHint);
-    const parsed = lines.map((line) => splitDelimitedLine(line, delimiter));
-
+    const delim = inferDelimiter(lines, extHint);
+    const parsed = lines.map(l => splitDelimitedLine(l, delim));
     const mode = headerMode.value;
     const hasHeader = mode === 'yes' ? true : mode === 'no' ? false : detectHeader(parsed);
-
     return rowsFromParsed(parsed, hasHeader);
   }
-
-  function parseCSVSmart(text) {
-    return parseDelimitedSmart(text, 'csv');
-  }
-
   function parseJSONSmart(text) {
     const parsed = JSON.parse(text);
-
-    if (!Array.isArray(parsed) || !parsed.length) {
-      throw new Error('JSON root must be a non-empty array.');
-    }
-
-    if (typeof parsed[0] === 'object' && !Array.isArray(parsed[0]) && parsed[0] !== null) {
-      return parsed.map((row) => ({ ...row }));
-    }
-
-    if (Array.isArray(parsed[0])) {
-      const mode = headerMode.value;
-      const hasHeader = mode === 'yes' ? true : mode === 'no' ? false : detectHeader(parsed);
-      return rowsFromParsed(parsed, hasHeader);
-    }
-
+    if (!Array.isArray(parsed) || !parsed.length) throw new Error('JSON must be non-empty array.');
+    if (typeof parsed[0] === 'object' && !Array.isArray(parsed[0])) return parsed.map(r => ({...r}));
+    if (Array.isArray(parsed[0])) { const mode = headerMode.value; const hasHeader = mode === 'yes' ? true : mode === 'no' ? false : detectHeader(parsed); return rowsFromParsed(parsed, hasHeader); }
     throw new Error('Unsupported JSON shape.');
   }
-
-  function parseExcelSmart(worksheet) {
-    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+  function parseExcelSmart(ws) {
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
     if (!rows.length) return [];
-
     const mode = headerMode.value;
     const hasHeader = mode === 'yes' ? true : mode === 'no' ? false : detectHeader(rows);
-
     return rowsFromParsed(rows, hasHeader);
   }
-
   function inferDelimiter(lines, extHint) {
     if (extHint === 'tsv' || extHint === 'tab') return '\t';
-
-    if (extHint === 'txt') {
-      const sample = lines.slice(0, 5).join('\n');
-      const tabCount = (sample.match(/\t/g) || []).length;
-      const commaCount = (sample.match(/,/g) || []).length;
-      const pipeCount = (sample.match(/\|/g) || []).length;
-
-      if (tabCount >= commaCount && tabCount >= pipeCount && tabCount > 0) return '\t';
-      if (pipeCount > commaCount && pipeCount > 0) return '|';
-    }
-
+    if (extHint === 'txt') { const s = lines.slice(0,5).join('\n'); const t=(s.match(/\t/g)||[]).length,c=(s.match(/,/g)||[]).length,p=(s.match(/\|/g)||[]).length; if(t>=c&&t>=p&&t>0)return'\t'; if(p>c&&p>0)return'|'; }
     return ',';
   }
-
   function splitDelimitedLine(line, delimiter) {
-    const result = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      const next = line[i + 1];
-
-      if (char === '"') {
-        if (inQuotes && next === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === delimiter && !inQuotes) {
-        result.push(current);
-        current = '';
-      } else {
-        current += char;
-      }
+    const result=[]; let current='',inQuotes=false;
+    for (let i=0;i<line.length;i++) {
+      const ch=line[i],nx=line[i+1];
+      if(ch==='"'){if(inQuotes&&nx==='"'){current+='"';i++;}else{inQuotes=!inQuotes;}}
+      else if(ch===delimiter&&!inQuotes){result.push(current);current='';}
+      else{current+=ch;}
     }
-
-    result.push(current);
-    return result;
+    result.push(current); return result;
   }
-
   function rowsFromParsed(parsedRows, hasHeader) {
-    if (!parsedRows.length) return [];
-
-    const width = Math.max(...parsedRows.map((r) => r.length));
-    const normalized = parsedRows.map((r) => {
-      const copy = [...r];
-      while (copy.length < width) copy.push('');
-      return copy;
-    });
-
-    const headers = hasHeader
-      ? normalized[0].map((h, i) => cleanHeaderName(h, i))
-      : Array.from({ length: width }, (_, i) => `col_${i + 1}`);
-
-    const start = hasHeader ? 1 : 0;
-    const out = [];
-
-    for (let i = start; i < normalized.length; i++) {
-      const obj = {};
-      headers.forEach((h, idx) => {
-        obj[h] = normalized[i][idx] ?? '';
-      });
-      out.push(obj);
-    }
-
+    if(!parsedRows.length)return[];
+    const width=Math.max(...parsedRows.map(r=>r.length));
+    const norm=parsedRows.map(r=>{const c=[...r];while(c.length<width)c.push('');return c;});
+    const headers=hasHeader?norm[0].map((h,i)=>cleanHeaderName(h,i)):Array.from({length:width},(_,i)=>`col_${i+1}`);
+    const start=hasHeader?1:0; const out=[];
+    for(let i=start;i<norm.length;i++){const obj={};headers.forEach((h,idx)=>{obj[h]=norm[i][idx]??'';});out.push(obj);}
     return out;
   }
-
-  function cleanHeaderName(value, index) {
-    const raw = String(value ?? '').trim();
-    return raw || `col_${index + 1}`;
-  }
-
+  function cleanHeaderName(value,index){const raw=String(value??'').trim();return raw||`col_${index+1}`;}
   function detectHeader(parsedRows) {
-    if (parsedRows.length < 2) return true;
-
-    const first = parsedRows[0] || [];
-    const second = parsedRows[1] || [];
-    const width = Math.max(first.length, second.length, 1);
-
-    let textishFirst = 0;
-    let numericFirst = 0;
-    let numericSecond = 0;
-
-    for (let i = 0; i < width; i++) {
-      const a = first[i] ?? '';
-      const b = second[i] ?? '';
-      const aNum = cleanNumber(a);
-      const bNum = cleanNumber(b);
-      const aIsNum = Number.isFinite(aNum);
-      const bIsNum = Number.isFinite(bNum);
-
-      if (aIsNum) numericFirst++;
-      else if (String(a).trim()) textishFirst++;
-
-      if (bIsNum) numericSecond++;
-    }
-
-    if (numericFirst === width && numericSecond >= Math.max(1, Math.floor(width * 0.7))) {
-      return false;
-    }
-
-    if (textishFirst >= Math.ceil(width * 0.4) && numericSecond >= Math.floor(width * 0.4)) {
-      return true;
-    }
-
-    return textishFirst > numericFirst;
+    if(parsedRows.length<2)return true;
+    const first=parsedRows[0]||[],second=parsedRows[1]||[],width=Math.max(first.length,second.length,1);
+    let textishFirst=0,numericFirst=0,numericSecond=0;
+    for(let i=0;i<width;i++){const a=first[i]??'',b=second[i]??'';const aIsNum=Number.isFinite(cleanNumber(a)),bIsNum=Number.isFinite(cleanNumber(b));if(aIsNum)numericFirst++;else if(String(a).trim())textishFirst++;if(bIsNum)numericSecond++;}
+    if(numericFirst===width&&numericSecond>=Math.max(1,Math.floor(width*.7)))return false;
+    if(textishFirst>=Math.ceil(width*.4)&&numericSecond>=Math.floor(width*.4))return true;
+    return textishFirst>numericFirst;
   }
 
   function ingestRows(rows, fileName) {
-    if (!rows || !rows.length) {
-      setStatus('No rows detected in the uploaded file.', 'bad');
-      return;
-    }
-
-    state.rawRows = rows.map((r) => ({ ...r }));
-    state.allColumns = Object.keys(rows[0]);
-    state.numericColumns = detectNumericColumns(rows);
-    state.profile = detectDatasetProfile(rows, state.numericColumns);
-
-    if (state.numericColumns.length < 3) {
-      setStatus('The file loaded, but fewer than three numeric columns were detected. At least three numeric columns are needed for BEP exploration.', 'bad');
-    } else {
-      setStatus(`Loaded ${fileName} successfully. Detected ${rows.length} rows and ${state.numericColumns.length} numeric columns.`, 'good');
-    }
-
-    renderDatasetMeta(rows);
-    renderPreview(rows);
-    setupSelectors();
-    renderDatasetProfile();
-    mappingSection.classList.remove('hidden');
-    resultsSection.classList.add('hidden');
-    state.analysis = null;
+    if(!rows||!rows.length){setStatus('No rows detected.','bad');return;}
+    state.rawRows=rows.map(r=>({...r})); state.allColumns=Object.keys(rows[0]);
+    state.numericColumns=detectNumericColumns(rows); state.profile=detectDatasetProfile(rows,state.numericColumns);
+    if(state.numericColumns.length<3) setStatus('Loaded but fewer than 3 numeric columns detected.','bad');
+    else setStatus(`Loaded ${fileName}: ${rows.length} rows, ${state.numericColumns.length} numeric columns.`,'good');
+    renderDatasetMeta(rows); renderPreview(rows); setupSelectors(); renderDatasetProfile();
+    mappingSection.classList.remove('hidden'); resultsSection.classList.add('hidden'); state.analysis=null;
   }
+  function detectNumericColumns(rows){const cols=Object.keys(rows[0]||{});return cols.filter(col=>{const v=rows.map(r=>cleanNumber(r[col])).filter(x=>Number.isFinite(x)).length;return v>=Math.max(4,rows.length*.4);});}
+  function cleanNumber(value){if(typeof value==='number')return Number.isFinite(value)?value:NaN;if(value===null||value===undefined)return NaN;const cleaned=String(value).trim().replace(/[%,$]/g,'');const num=parseFloat(cleaned);return Number.isFinite(num)?num:NaN;}
+  function renderDatasetMeta(rows){const missing=countMissing(rows);datasetMeta.innerHTML=`<div class="meta-item"><div class="label">Rows</div><div class="value">${rows.length}</div></div><div class="meta-item"><div class="label">Columns</div><div class="value">${state.allColumns.length}</div></div><div class="meta-item"><div class="label">Numeric</div><div class="value">${state.numericColumns.length}</div></div><div class="meta-item"><div class="label">Missing</div><div class="value">${missing}</div></div>`;datasetMeta.classList.remove('hidden');}
+  function countMissing(rows){let c=0;rows.forEach(row=>Object.values(row).forEach(v=>{if(v===''||v===null||v===undefined)c++;}));return c;}
+  function renderPreview(rows){const showRows=rows.slice(0,12),cols=state.allColumns;const head=`<thead><tr>${cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>`;const body=`<tbody>${showRows.map(r=>`<tr>${cols.map(c=>`<td>${escapeHtml(String(r[c]??''))}</td>`).join('')}</tr>`).join('')}</tbody>`;previewWrap.innerHTML=`<table>${head}${body}</table>`;previewWrap.classList.remove('hidden');tablePlaceholder.classList.add('hidden');}
+  function escapeHtml(str){return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+  function setupSelectors(){populateMultiSelect('energyCols',state.numericColumns,suggestColumns(profileKeywords('energy'),2));populateMultiSelect('belongingCols',state.numericColumns,suggestColumns(profileKeywords('belonging'),2));populateMultiSelect('predictionCols',state.numericColumns,suggestColumns(profileKeywords('prediction'),1));populateSelect('groupCol',['(none)',...state.allColumns],'(none)');populateSelect('timeCol',['(none)',...state.allColumns],'(none)');}
+  function profileKeywords(kind){const mode=datasetMode.value==='auto'?(state.profile?.mode||'mixed'):datasetMode.value;const common={energy:['energy','hrv','rmssd','sleep','fatigue','stress','vital','eda','bvp','ecg','rr','pulse','temp'],belonging:['belong','trust','support','safety','attach','cohes','inclusion','lonely','reject','social','team'],prediction:['predict','decision','accuracy','adapt','update','error','performance','outcome','score','label','class']};if(mode==='physiology'){if(kind==='energy')return['hrv','rr','ecg','eda','bvp','pulse','temp','stress','energy'];if(kind==='belonging')return['support','social','trust','cohes','belong'];return['label','class','score','stress','outcome'];}if(mode==='survey'){if(kind==='energy')return['fatigue','stress','sleep','burnout','energy'];if(kind==='belonging')return['belong','support','trust','safety','cohes','inclusion','lonely'];return['outcome','score','adapt','decision','performance'];}if(mode==='performance'){if(kind==='energy')return['fatigue','stress','sleep','load','energy'];if(kind==='belonging')return['team','support','trust','cohes','safety'];return['accuracy','error','performance','decision','score','outcome'];}return common[kind];}
+  function suggestColumns(keywords,maxCount){const found=[];const lower=state.numericColumns.map(c=>c.toLowerCase());keywords.forEach(kw=>{const idx=lower.findIndex(col=>col.includes(kw));if(idx>=0&&!found.includes(state.numericColumns[idx]))found.push(state.numericColumns[idx]);});while(found.length<maxCount&&found.length<state.numericColumns.length){const c=state.numericColumns[found.length];if(!found.includes(c))found.push(c);}return found;}
+  function populateSelect(id,options,selected){const s=document.getElementById(id);s.innerHTML=options.map(opt=>`<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');if(selected&&options.includes(selected))s.value=selected;}
+  function populateMultiSelect(id,options,selectedArr){const s=document.getElementById(id);s.innerHTML=options.map(opt=>`<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');[...s.options].forEach(opt=>{opt.selected=selectedArr.includes(opt.value);});}
+  function getSelectedValues(id){return[...document.getElementById(id).selectedOptions].map(o=>o.value);}
+  function detectDatasetProfile(rows,numericColumns){const cols=Object.keys(rows[0]||{}),lower=cols.map(c=>c.toLowerCase());const physiologyHits=countKeywordHits(lower,['ecg','eda','bvp','rr','heart','pulse','resp','temp','emg']);const socialHits=countKeywordHits(lower,['trust','social','support','belong','cohes','safety','lonely','attach','team']);const performanceHits=countKeywordHits(lower,['accuracy','error','decision','score','performance','outcome','label','class']);const lastCol=cols[cols.length-1]||'';const uniqueLast=new Set(rows.slice(0,200).map(r=>String(r[lastCol]))).size;let mode='mixed';if(physiologyHits>socialHits&&physiologyHits>=performanceHits)mode='physiology';else if(socialHits>physiologyHits&&socialHits>=performanceHits)mode='survey';else if(performanceHits>0&&performanceHits>=socialHits)mode='performance';const likelySignalMatrix=numericColumns.length>Math.max(20,cols.length*.8)&&socialHits===0;const likelyLabelColumn=uniqueLast<=12?lastCol:null;return{mode,likelySignalMatrix,likelyLabelColumn};}
+  function countKeywordHits(lowerCols,keywords){let hits=0;lowerCols.forEach(c=>{if(keywords.some(k=>c.includes(k)))hits++;});return hits;}
+  function renderDatasetProfile(){if(!state.profile){datasetProfileBox.classList.add('hidden');return;}const mode=datasetMode.value==='auto'?state.profile.mode:datasetMode.value;let tone='warn';let msg=`Detected dataset profile: ${mode}.`;if(state.profile.likelySignalMatrix)msg+=' Signal-heavy matrix detected. Belonging may be weak or absent.';if(state.profile.likelyLabelColumn)msg+=` Likely label/class column: ${state.profile.likelyLabelColumn}.`;if(mode==='survey'){tone='good';msg+=' Survey datasets often map well to Belonging variables.';}else if(mode==='physiology'){tone='warn';msg+=' Physiology datasets often require partial BEP interpretation.';}datasetProfileBox.className=`status ${tone}`;datasetProfileBox.textContent=msg;datasetProfileBox.classList.remove('hidden');}
 
-  function detectNumericColumns(rows) {
-    const cols = Object.keys(rows[0] || {});
-    return cols.filter((col) => {
-      const validCount = rows
-        .map((r) => cleanNumber(r[col]))
-        .filter((v) => Number.isFinite(v)).length;
-
-      return validCount >= Math.max(4, rows.length * 0.4);
-    });
-  }
-
-  function cleanNumber(value) {
-    if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
-    if (value === null || value === undefined) return NaN;
-
-    const cleaned = String(value).trim().replace(/[%,$]/g, '');
-    const num = parseFloat(cleaned);
-
-    return Number.isFinite(num) ? num : NaN;
-  }
-
-  function renderDatasetMeta(rows) {
-    const missing = countMissing(rows);
-
-    datasetMeta.innerHTML = `
-      <div class="meta-item"><div class="label">Rows</div><div class="value">${rows.length}</div></div>
-      <div class="meta-item"><div class="label">Columns</div><div class="value">${state.allColumns.length}</div></div>
-      <div class="meta-item"><div class="label">Numeric Columns</div><div class="value">${state.numericColumns.length}</div></div>
-      <div class="meta-item"><div class="label">Missing Cells</div><div class="value">${missing}</div></div>
-    `;
-
-    datasetMeta.classList.remove('hidden');
-  }
-
-  function countMissing(rows) {
-    let count = 0;
-
-    rows.forEach((row) => {
-      Object.values(row).forEach((v) => {
-        if (v === '' || v === null || v === undefined) count++;
-      });
-    });
-
-    return count;
-  }
-
-  function renderPreview(rows) {
-    const showRows = rows.slice(0, 12);
-    const cols = state.allColumns;
-
-    const head = `<thead><tr>${cols.map((c) => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>`;
-    const body = `<tbody>${showRows.map((r) => `<tr>${cols.map((c) => `<td>${escapeHtml(String(r[c] ?? ''))}</td>`).join('')}</tr>`).join('')}</tbody>`;
-
-    previewWrap.innerHTML = `<table>${head}${body}</table>`;
-    previewWrap.classList.remove('hidden');
-    tablePlaceholder.classList.add('hidden');
-  }
-
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  function setupSelectors() {
-    populateMultiSelect('energyCols', state.numericColumns, suggestColumns(profileKeywords('energy'), 2));
-    populateMultiSelect('belongingCols', state.numericColumns, suggestColumns(profileKeywords('belonging'), 2));
-    populateMultiSelect('predictionCols', state.numericColumns, suggestColumns(profileKeywords('prediction'), 1));
-    populateSelect('groupCol', ['(none)', ...state.allColumns], '(none)');
-    populateSelect('timeCol', ['(none)', ...state.allColumns], '(none)');
-  }
-
-  function profileKeywords(kind) {
-    const mode = datasetMode.value === 'auto' ? (state.profile?.mode || 'mixed') : datasetMode.value;
-
-    const common = {
-      energy: ['energy', 'hrv', 'rmssd', 'sleep', 'fatigue', 'stress', 'vital', 'eda', 'bvp', 'ecg', 'rr', 'pulse', 'temp'],
-      belonging: ['belong', 'trust', 'support', 'safety', 'attach', 'cohes', 'inclusion', 'lonely', 'reject', 'social', 'team'],
-      prediction: ['predict', 'decision', 'accuracy', 'adapt', 'update', 'error', 'performance', 'outcome', 'score', 'label', 'class']
-    };
-
-    if (mode === 'physiology') {
-      if (kind === 'energy') return ['hrv', 'rr', 'ecg', 'eda', 'bvp', 'pulse', 'temp', 'stress', 'energy'];
-      if (kind === 'belonging') return ['support', 'social', 'trust', 'cohes', 'belong'];
-      return ['label', 'class', 'score', 'stress', 'outcome'];
-    }
-
-    if (mode === 'survey') {
-      if (kind === 'energy') return ['fatigue', 'stress', 'sleep', 'burnout', 'energy'];
-      if (kind === 'belonging') return ['belong', 'support', 'trust', 'safety', 'cohes', 'inclusion', 'lonely'];
-      return ['outcome', 'score', 'adapt', 'decision', 'performance'];
-    }
-
-    if (mode === 'performance') {
-      if (kind === 'energy') return ['fatigue', 'stress', 'sleep', 'load', 'energy'];
-      if (kind === 'belonging') return ['team', 'support', 'trust', 'cohes', 'safety'];
-      return ['accuracy', 'error', 'performance', 'decision', 'score', 'outcome'];
-    }
-
-    return common[kind];
-  }
-
-  function suggestColumns(keywords, maxCount) {
-    const found = [];
-    const lower = state.numericColumns.map((c) => c.toLowerCase());
-
-    keywords.forEach((keyword) => {
-      const idx = lower.findIndex((col) => col.includes(keyword));
-      if (idx >= 0 && !found.includes(state.numericColumns[idx])) {
-        found.push(state.numericColumns[idx]);
-      }
-    });
-
-    while (found.length < maxCount && found.length < state.numericColumns.length) {
-      const candidate = state.numericColumns[found.length];
-      if (!found.includes(candidate)) found.push(candidate);
-    }
-
-    return found;
-  }
-
-  function populateSelect(id, options, selected) {
-    const select = document.getElementById(id);
-    select.innerHTML = options.map((opt) => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
-    if (selected && options.includes(selected)) select.value = selected;
-  }
-
-  function populateMultiSelect(id, options, selectedArr) {
-    const select = document.getElementById(id);
-    select.innerHTML = options.map((opt) => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
-    [...select.options].forEach((opt) => {
-      opt.selected = selectedArr.includes(opt.value);
-    });
-  }
-
-  function getSelectedValues(id) {
-    return [...document.getElementById(id).selectedOptions].map((o) => o.value);
-  }
-
-  function detectDatasetProfile(rows, numericColumns) {
-    const cols = Object.keys(rows[0] || {});
-    const lower = cols.map((c) => c.toLowerCase());
-
-    const physiologyHits = countKeywordHits(lower, ['ecg', 'eda', 'bvp', 'rr', 'heart', 'pulse', 'resp', 'temp', 'emg']);
-    const socialHits = countKeywordHits(lower, ['trust', 'social', 'support', 'belong', 'cohes', 'safety', 'lonely', 'attach', 'team']);
-    const performanceHits = countKeywordHits(lower, ['accuracy', 'error', 'decision', 'score', 'performance', 'outcome', 'label', 'class']);
-
-    const lastCol = cols[cols.length - 1] || '';
-    const lastValues = rows.slice(0, Math.min(rows.length, 200)).map((r) => r[lastCol]);
-    const uniqueLast = new Set(lastValues.map((v) => String(v))).size;
-
-    let mode = 'mixed';
-
-    if (physiologyHits > socialHits && physiologyHits >= performanceHits) mode = 'physiology';
-    else if (socialHits > physiologyHits && socialHits >= performanceHits) mode = 'survey';
-    else if (performanceHits > 0 && performanceHits >= socialHits) mode = 'performance';
-
-    const likelySignalMatrix = numericColumns.length > Math.max(20, cols.length * 0.8) && socialHits === 0;
-    const likelyLabelColumn = uniqueLast <= 12 ? lastCol : null;
-
-    return { mode, likelySignalMatrix, likelyLabelColumn };
-  }
-
-  function countKeywordHits(lowerCols, keywords) {
-    let hits = 0;
-    lowerCols.forEach((c) => {
-      if (keywords.some((k) => c.includes(k))) hits++;
-    });
-    return hits;
-  }
-
-  function renderDatasetProfile() {
-    if (!state.profile) {
-      datasetProfileBox.classList.add('hidden');
-      return;
-    }
-
-    const mode = datasetMode.value === 'auto' ? state.profile.mode : datasetMode.value;
-    let tone = 'warn';
-    let msg = `Detected dataset profile: ${mode}.`;
-
-    if (state.profile.likelySignalMatrix) {
-      msg += ' This looks like a signal-heavy matrix. It may support Energy-like analysis well, but may have weak or missing Belonging coverage.';
-    }
-
-    if (state.profile.likelyLabelColumn) {
-      msg += ` Likely label/class column: ${state.profile.likelyLabelColumn}.`;
-    }
-
-    if (mode === 'survey') {
-      tone = 'good';
-      msg += ' Survey-style datasets often map better to Belonging variables.';
-    } else if (mode === 'physiology') {
-      tone = 'warn';
-      msg += ' Physiology-heavy datasets often require partial BEP interpretation.';
-    }
-
-    datasetProfileBox.className = `status ${tone}`;
-    datasetProfileBox.textContent = msg;
-    datasetProfileBox.classList.remove('hidden');
-  }
+  // ── Core analysis ──
   function runAnalysis() {
-    if (!state.rawRows.length) {
-      setStatus('Upload a dataset first.', 'bad');
-      return;
-    }
-
-    const energyCols = getSelectedValues('energyCols');
-    const belongingCols = getSelectedValues('belongingCols');
-    const predictionCols = getSelectedValues('predictionCols');
-    const groupCol = document.getElementById('groupCol').value || '(none)';
-    const timeCol = document.getElementById('timeCol').value || '(none)';
-    const energyWeight = parseFloat(document.getElementById('energyWeight').value) || 0.5;
-    const belongingWeight = parseFloat(document.getElementById('belongingWeight').value) || 0.5;
-    const threshold = parseFloat(document.getElementById('threshold').value) || 0.6;
-    const topN = parseInt(document.getElementById('topNLabel').value, 10) || 120;
-    const notes = document.getElementById('notesBox').value.trim();
-
-    if (!energyCols.length || !belongingCols.length || !predictionCols.length) {
-      setStatus('Select at least one column for Energy, Belonging, and Prediction.', 'bad');
-      return;
-    }
-
-    const working = state.rawRows
-      .map((row, idx) => ({
-        idx,
-        raw: row,
-        eVals: energyCols.map((col) => cleanNumber(row[col])).filter(Number.isFinite),
-        bVals: belongingCols.map((col) => cleanNumber(row[col])).filter(Number.isFinite),
-        pVals: predictionCols.map((col) => cleanNumber(row[col])).filter(Number.isFinite),
-        group: groupCol !== '(none)' ? String(row[groupCol] ?? 'Unknown') : null,
-        time: timeCol !== '(none)' ? row[timeCol] : null
-      }))
-      .filter((r) => r.eVals.length && r.bVals.length && r.pVals.length);
-
-    if (working.length < 8) {
-      setStatus('Not enough valid rows after cleaning and proxy selection. Try different columns or a larger dataset.', 'bad');
-      return;
-    }
-
-    const normalizedProxyMap = {};
-    [...new Set([...energyCols, ...belongingCols, ...predictionCols])].forEach((col) => {
-      normalizedProxyMap[col] = normalizeArray(working.map((r) => cleanNumber(r.raw[col])));
-    });
-
-    working.forEach((row, i) => {
-      row.eNorm = mean(energyCols.map((col) => normalizedProxyMap[col][i]).filter(Number.isFinite));
-      row.bNorm = mean(belongingCols.map((col) => normalizedProxyMap[col][i]).filter(Number.isFinite));
-      row.pNorm = mean(predictionCols.map((col) => normalizedProxyMap[col][i]).filter(Number.isFinite));
-      row.field = weightedMean([row.eNorm, row.bNorm], [energyWeight, belongingWeight]);
-      row.expected = row.field;
-      row.residual = row.pNorm - row.expected;
-      row.state = classifyState(row.eNorm, row.bNorm, row.field, threshold);
-    });
-
-    const singleBaselines = [...new Set([...energyCols, ...belongingCols])]
-      .map((col) => ({
-        col,
-        corr: pearson(normalizedProxyMap[col], working.map((r) => r.pNorm))
-      }))
-      .sort((a, b) => Math.abs(b.corr) - Math.abs(a.corr));
-
-    const eCorr = pearson(
-      working.map((r) => r.eNorm),
-      working.map((r) => r.pNorm)
-    );
-
-    const bCorr = pearson(
-      working.map((r) => r.bNorm),
-      working.map((r) => r.pNorm)
-    );
-
-    const fieldCorr = pearson(
-      working.map((r) => r.field),
-      working.map((r) => r.pNorm)
-    );
-
-    const baselineCorr = singleBaselines.length ? singleBaselines[0].corr : 0;
-    const mae = meanAbsoluteError(
-      working.map((r) => r.pNorm),
-      working.map((r) => r.expected)
-    );
-    const fit = clamp01(((fieldCorr + 1) / 2) * 0.72 + (1 - mae) * 0.28);
-    const improvement = fieldCorr - baselineCorr;
-    const stateCounts = countBy(working, (r) => r.state);
-    const groupSummary = buildGroupSummary(working);
-    const heatMatrix = buildHeatMatrix(working);
-    const orderedForLine = orderRowsForTrend(working, timeCol, topN);
-
-    state.analysis = {
-      fileName: state.fileName,
-      n: working.length,
-      energyCols,
-      belongingCols,
-      predictionCols,
-      groupCol,
-      timeCol,
-      energyWeight,
-      belongingWeight,
-      threshold,
-      topN,
-      notes,
-      working,
-      orderedForLine,
-      eCorr,
-      bCorr,
-      fieldCorr,
-      baselineCorr,
-      bestBaseline: singleBaselines[0] || null,
-      mae,
-      fit,
-      improvement,
-      stateCounts,
-      groupSummary,
-      heatMatrix
-    };
-
-    updateStatCards(state.analysis);
-    drawScatter('scatterCanvas', working);
-    drawLine('lineCanvas', orderedForLine);
-    drawBar('barCanvas', stateCounts);
-    drawGroupChart('groupCanvas', groupSummary);
-    drawHeatmap('heatCanvas', heatMatrix);
-    drawComparison('compareCanvas', state.analysis);
-    renderInterpretation(state.analysis);
-
-    resultsSection.classList.remove('hidden');
-    setStatus(`Analysis complete for ${working.length} usable observations.`, 'good');
-    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if(!state.rawRows.length){setStatus('Upload a dataset first.','bad');return;}
+    const energyCols=getSelectedValues('energyCols'),belongingCols=getSelectedValues('belongingCols'),predictionCols=getSelectedValues('predictionCols');
+    const groupCol=document.getElementById('groupCol').value||'(none)',timeCol=document.getElementById('timeCol').value||'(none)';
+    const energyWeight=parseFloat(document.getElementById('energyWeight').value)||.5,belongingWeight=parseFloat(document.getElementById('belongingWeight').value)||.5;
+    const threshold=parseFloat(document.getElementById('threshold').value)||.6,topN=parseInt(document.getElementById('topNLabel').value,10)||120;
+    const notes=document.getElementById('notesBox').value.trim();
+    if(!energyCols.length||!belongingCols.length||!predictionCols.length){setStatus('Select at least one column for Energy, Belonging, and Prediction.','bad');return;}
+    const working=state.rawRows.map((row,idx)=>({idx,raw:row,eVals:energyCols.map(col=>cleanNumber(row[col])).filter(Number.isFinite),bVals:belongingCols.map(col=>cleanNumber(row[col])).filter(Number.isFinite),pVals:predictionCols.map(col=>cleanNumber(row[col])).filter(Number.isFinite),group:groupCol!=='(none)'?String(row[groupCol]??'Unknown'):null,time:timeCol!=='(none)'?row[timeCol]:null})).filter(r=>r.eVals.length&&r.bVals.length&&r.pVals.length);
+    if(working.length<8){setStatus('Not enough valid rows. Try different columns or a larger dataset.','bad');return;}
+    const normalizedProxyMap={};[...new Set([...energyCols,...belongingCols,...predictionCols])].forEach(col=>{normalizedProxyMap[col]=normalizeArray(working.map(r=>cleanNumber(r.raw[col])));});
+    working.forEach((row,i)=>{row.eNorm=mean(energyCols.map(col=>normalizedProxyMap[col][i]).filter(Number.isFinite));row.bNorm=mean(belongingCols.map(col=>normalizedProxyMap[col][i]).filter(Number.isFinite));row.pNorm=mean(predictionCols.map(col=>normalizedProxyMap[col][i]).filter(Number.isFinite));row.field=weightedMean([row.eNorm,row.bNorm],[energyWeight,belongingWeight]);row.expected=row.field;row.residual=row.pNorm-row.expected;row.state=classifyState(row.eNorm,row.bNorm,row.field,threshold);});
+    const singleBaselines=[...new Set([...energyCols,...belongingCols])].map(col=>({col,corr:pearson(normalizedProxyMap[col],working.map(r=>r.pNorm))})).sort((a,b)=>Math.abs(b.corr)-Math.abs(a.corr));
+    const eCorr=pearson(working.map(r=>r.eNorm),working.map(r=>r.pNorm)),bCorr=pearson(working.map(r=>r.bNorm),working.map(r=>r.pNorm)),fieldCorr=pearson(working.map(r=>r.field),working.map(r=>r.pNorm));
+    const baselineCorr=singleBaselines.length?singleBaselines[0].corr:0,mae=meanAbsoluteError(working.map(r=>r.pNorm),working.map(r=>r.expected));
+    const fit=clamp01(((fieldCorr+1)/2)*.72+(1-mae)*.28),improvement=fieldCorr-baselineCorr;
+    const stateCounts=countBy(working,r=>r.state),groupSummary=buildGroupSummary(working),heatMatrix=buildHeatMatrix(working),orderedForLine=orderRowsForTrend(working,timeCol,topN);
+    state.analysis={fileName:state.fileName,n:working.length,energyCols,belongingCols,predictionCols,groupCol,timeCol,energyWeight,belongingWeight,threshold,topN,notes,working,orderedForLine,eCorr,bCorr,fieldCorr,baselineCorr,bestBaseline:singleBaselines[0]||null,mae,fit,improvement,stateCounts,groupSummary,heatMatrix};
+    updateStatCards(state.analysis); drawScatter('scatterCanvas',working); drawLine('lineCanvas',orderedForLine); drawBar('barCanvas',stateCounts); drawGroupChart('groupCanvas',groupSummary); drawHeatmap('heatCanvas',heatMatrix); drawComparison('compareCanvas',state.analysis); renderInterpretation(state.analysis);
+    resultsSection.classList.remove('hidden'); setStatus(`Analysis complete for ${working.length} observations.`,'good'); resultsSection.scrollIntoView({behavior:'smooth',block:'start'});
   }
 
-  function orderRowsForTrend(rows, timeCol, topN) {
-    const arr = [...rows];
-    if (timeCol !== '(none)') {
-      arr.sort((a, b) =>
-        String(a.time).localeCompare(String(b.time), undefined, { numeric: true })
-      );
-    }
-    return arr.slice(0, topN);
-  }
-
-  function classifyState(e, b, field, threshold) {
-    if (field >= threshold && e >= 0.5 && b >= 0.5) return 'Higher-field';
-    if (field < threshold * 0.7 && (e < 0.4 || b < 0.4)) return 'Lower-field';
-    return 'Mixed-field';
-  }
-
-  function normalizeArray(arr) {
-    const valid = arr.filter(Number.isFinite);
-    const min = Math.min(...valid);
-    const max = Math.max(...valid);
-
-    if (!Number.isFinite(min) || !Number.isFinite(max) || max === min) {
-      return arr.map(() => 0.5);
-    }
-
-    return arr.map((v) => (Number.isFinite(v) ? clamp01((v - min) / (max - min)) : NaN));
-  }
-
-  function weightedMean(values, weights) {
-    const numerator = values.reduce((acc, v, i) => acc + v * weights[i], 0);
-    const denom = weights.reduce((a, b) => a + b, 0) || 1;
-    return numerator / denom;
-  }
-
-  function clamp01(v) {
-    return Math.max(0, Math.min(1, v));
-  }
-
-  function mean(arr) {
-    return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : NaN;
-  }
-
-  function pearson(a, b) {
-    if (!a.length || a.length !== b.length) return 0;
-
-    const valid = a
-      .map((v, i) => [v, b[i]])
-      .filter((pair) => Number.isFinite(pair[0]) && Number.isFinite(pair[1]));
-
-    if (valid.length < 3) return 0;
-
-    const xs = valid.map((v) => v[0]);
-    const ys = valid.map((v) => v[1]);
-    const mx = mean(xs);
-    const my = mean(ys);
-
-    let num = 0;
-    let denX = 0;
-    let denY = 0;
-
-    for (let i = 0; i < xs.length; i++) {
-      const dx = xs[i] - mx;
-      const dy = ys[i] - my;
-      num += dx * dy;
-      denX += dx * dx;
-      denY += dy * dy;
-    }
-
-    const den = Math.sqrt(denX * denY);
-    return den ? num / den : 0;
-  }
-
-  function meanAbsoluteError(obs, pred) {
-    return mean(obs.map((v, i) => Math.abs(v - pred[i])));
-  }
-
-  function countBy(arr, fn) {
-    return arr.reduce((acc, item) => {
-      const key = fn(item);
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {});
-  }
-
-  function buildGroupSummary(working) {
-    const hasGroups = working.some((r) => r.group);
-    const groups = {};
-
-    if (hasGroups) {
-      working.forEach((r) => {
-        const g = r.group || 'Unknown';
-        groups[g] = groups[g] || [];
-        groups[g].push(r.field);
-      });
-
-      return Object.entries(groups).map(([group, vals]) => ({
-        group,
-        score: mean(vals),
-        n: vals.length
-      }));
-    }
-
-    const sorted = [...working].sort((a, b) => a.field - b.field);
-    const bins = 4;
-    const chunk = Math.ceil(sorted.length / bins);
-    const fallback = [];
-
-    for (let i = 0; i < bins; i++) {
-      const slice = sorted.slice(i * chunk, (i + 1) * chunk);
-      if (slice.length) {
-        fallback.push({
-          group: `Quartile ${i + 1}`,
-          score: mean(slice.map((r) => r.field)),
-          n: slice.length
-        });
-      }
-    }
-
-    return fallback;
-  }
-
-  function buildHeatMatrix(working) {
-    const labels = ['Energy', 'Belonging', 'Prediction', 'Field'];
-
-    const series = {
-      Energy: working.map((r) => r.eNorm),
-      Belonging: working.map((r) => r.bNorm),
-      Prediction: working.map((r) => r.pNorm),
-      Field: working.map((r) => r.field)
-    };
-
-    const values = labels.map((row) =>
-      labels.map((col) => pearson(series[row], series[col]))
-    );
-
-    return { labels, values };
-  }
-
-  function signed(v) {
-    const str = (Math.round(v * 100) / 100).toFixed(2);
-    return v > 0 ? `+${str}` : str;
-  }
-
-  function updateStatCards(a) {
-    document.getElementById('fieldAlignmentScore').textContent = `${Math.round(a.fit * 100)}%`;
-    document.getElementById('fieldCorrCard').textContent = signed(a.fieldCorr);
-    document.getElementById('baselineCorrCard').textContent = signed(a.baselineCorr);
-    document.getElementById('improvementCard').textContent = signed(a.improvement);
-  }
+  function orderRowsForTrend(rows,timeCol,topN){const arr=[...rows];if(timeCol!=='(none)')arr.sort((a,b)=>String(a.time).localeCompare(String(b.time),undefined,{numeric:true}));return arr.slice(0,topN);}
+  function classifyState(e,b,field,threshold){if(field>=threshold&&e>=.5&&b>=.5)return'Higher-field';if(field<threshold*.7&&(e<.4||b<.4))return'Lower-field';return'Mixed-field';}
+  function normalizeArray(arr){const valid=arr.filter(Number.isFinite),min=Math.min(...valid),max=Math.max(...valid);if(!Number.isFinite(min)||!Number.isFinite(max)||max===min)return arr.map(()=>.5);return arr.map(v=>Number.isFinite(v)?clamp01((v-min)/(max-min)):NaN);}
+  function weightedMean(values,weights){const num=values.reduce((acc,v,i)=>acc+v*weights[i],0);const den=weights.reduce((a,b)=>a+b,0)||1;return num/den;}
+  function clamp01(v){return Math.max(0,Math.min(1,v));}
+  function mean(arr){return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:NaN;}
+  function pearson(a,b){if(!a.length||a.length!==b.length)return 0;const valid=a.map((v,i)=>[v,b[i]]).filter(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]));if(valid.length<3)return 0;const xs=valid.map(v=>v[0]),ys=valid.map(v=>v[1]),mx=mean(xs),my=mean(ys);let num=0,denX=0,denY=0;for(let i=0;i<xs.length;i++){const dx=xs[i]-mx,dy=ys[i]-my;num+=dx*dy;denX+=dx*dx;denY+=dy*dy;}const den=Math.sqrt(denX*denY);return den?num/den:0;}
+  function meanAbsoluteError(obs,pred){return mean(obs.map((v,i)=>Math.abs(v-pred[i])));}
+  function countBy(arr,fn){return arr.reduce((acc,item)=>{const key=fn(item);acc[key]=(acc[key]||0)+1;return acc;},{});}
+  function buildGroupSummary(working){const hasGroups=working.some(r=>r.group);const groups={};if(hasGroups){working.forEach(r=>{const g=r.group||'Unknown';groups[g]=groups[g]||[];groups[g].push(r.field);});return Object.entries(groups).map(([group,vals])=>({group,score:mean(vals),n:vals.length}));}const sorted=[...working].sort((a,b)=>a.field-b.field),bins=4,chunk=Math.ceil(sorted.length/bins),fallback=[];for(let i=0;i<bins;i++){const slice=sorted.slice(i*chunk,(i+1)*chunk);if(slice.length)fallback.push({group:`Quartile ${i+1}`,score:mean(slice.map(r=>r.field)),n:slice.length});}return fallback;}
+  function buildHeatMatrix(working){const labels=['Energy','Belonging','Prediction','Field'],series={Energy:working.map(r=>r.eNorm),Belonging:working.map(r=>r.bNorm),Prediction:working.map(r=>r.pNorm),Field:working.map(r=>r.field)};const values=labels.map(row=>labels.map(col=>pearson(series[row],series[col])));return{labels,values};}
+  function signed(v){const str=(Math.round(v*100)/100).toFixed(2);return v>0?`+${str}`:str;}
+  function updateStatCards(a){document.getElementById('fieldAlignmentScore').textContent=`${Math.round(a.fit*100)}%`;document.getElementById('fieldCorrCard').textContent=signed(a.fieldCorr);document.getElementById('baselineCorrCard').textContent=signed(a.baselineCorr);document.getElementById('improvementCard').textContent=signed(a.improvement);}
 
   function renderInterpretation(a) {
-    const dominant = dominantState(a.stateCounts);
-    const fitText = interpretFit(a.fit);
-    const corrText = interpretCorrelation(a.fieldCorr);
-    const direction =
-      a.improvement > 0 ? 'outperformed' : a.improvement < 0 ? 'did not outperform' : 'matched';
-    const bestBaselineLabel = a.bestBaseline
-      ? `${a.bestBaseline.col} (${signed(a.bestBaseline.corr)})`
-      : 'none';
-
-    const profileMode =
-      datasetMode.value === 'auto' ? state.profile?.mode || 'mixed' : datasetMode.value;
-
-    const partialModeNote =
-      profileMode === 'physiology' || state.profile?.likelySignalMatrix
-        ? 'This dataset appears physiology-heavy, so Belonging may be weakly represented or absent. Treat this run as partial BEP exploration rather than full-construct testing.'
-        : 'This dataset appears more suitable for broader BEP construct testing.';
-
-    document.getElementById('interpretationBox').innerHTML = `
-      <div class="kicker">Interpretation Summary</div>
-      This run produced a <strong>${Math.round(a.fit * 100)}% field-alignment score</strong>, indicating <strong>${fitText}</strong> between the selected BEP proxy structure and the composite outcome variable. The overall association between the composite BEP field score and the selected Prediction composite was <strong>${signed(a.fieldCorr)}</strong>, which suggests <strong>${corrText}</strong>.<br/><br/>
-      The strongest single-variable baseline in this run was <strong>${bestBaselineLabel}</strong>. Relative to that baseline, the BEP composite <strong>${direction}</strong> the single-variable explanation by <strong>${signed(a.improvement)}</strong>. The dataset was primarily dominated by <strong>${dominant}</strong> observations.<br/><br/>
-      <strong>Dataset suitability note:</strong> ${partialModeNote}<br/><br/>
-      Suggested researcher-facing framing: <strong>"Under the current proxy mapping, the uploaded dataset appears ${a.fit >= 0.7 ? 'strongly' : a.fit >= 0.52 ? 'moderately' : 'weakly'} consistent with a BEP-style field-gated account of outcome variation. These results should be treated as exploratory model support or non-support, not proof."</strong><br/><br/>
-      ${a.notes ? `<strong>Research notes recorded:</strong> ${escapeHtml(a.notes)}<br/><br/>` : ''}
-      Recommended next steps: confirm the header mode, choose only variables you actually recognize, leave Group and Time at none unless the file clearly contains them, and rerun with alternate proxy selections if the dataset is signal-heavy.
-    `;
+    const dominant=dominantState(a.stateCounts),fitText=interpretFit(a.fit),corrText=interpretCorrelation(a.fieldCorr);
+    const direction=a.improvement>0?'outperformed':a.improvement<0?'did not outperform':'matched';
+    const bestBaselineLabel=a.bestBaseline?`${a.bestBaseline.col} (${signed(a.bestBaseline.corr)})`:'none';
+    const profileMode=datasetMode.value==='auto'?(state.profile?.mode||'mixed'):datasetMode.value;
+    const partialModeNote=profileMode==='physiology'||state.profile?.likelySignalMatrix?'This dataset appears physiology-heavy, so Belonging may be weakly represented or absent. Treat this run as partial BEP exploration rather than full-construct testing.':'This dataset appears more suitable for broader BEP construct testing.';
+    document.getElementById('interpretationBox').innerHTML=`<div class="kicker">Interpretation Summary</div>This run produced a <strong>${Math.round(a.fit*100)}% field-alignment score</strong>, indicating <strong>${fitText}</strong> between the selected BEP proxy structure and the composite outcome variable. The overall association between the composite BEP field score and the selected Prediction composite was <strong>${signed(a.fieldCorr)}</strong>, which suggests <strong>${corrText}</strong>.<br/><br/>The strongest single-variable baseline was <strong>${bestBaselineLabel}</strong>. Relative to that baseline, the BEP composite <strong>${direction}</strong> the single-variable explanation by <strong>${signed(a.improvement)}</strong>. The dataset was primarily dominated by <strong>${dominant}</strong> observations.<br/><br/><strong>Dataset suitability note:</strong> ${partialModeNote}<br/><br/>Suggested researcher-facing framing: <strong>"Under the current proxy mapping, the uploaded dataset appears ${a.fit>=.7?'strongly':a.fit>=.52?'moderately':'weakly'} consistent with a BEP-style field-gated account of outcome variation. These results are exploratory."</strong><br/><br/>${a.notes?`<strong>Research notes:</strong> ${escapeHtml(a.notes)}<br/><br/>`:''}Recommended next steps: confirm the header mode, select only variables you recognize, and rerun with alternate proxy selections if the dataset is signal-heavy.`;
   }
+  function dominantState(counts){const e=Object.entries(counts).sort((a,b)=>b[1]-a[1]);return e.length?e[0][0]:'Mixed-field';}
+  function interpretFit(fit){if(fit>=.78)return'strong exploratory alignment';if(fit>=.58)return'moderate exploratory alignment';if(fit>=.42)return'partial exploratory alignment';return'weak exploratory alignment';}
+  function interpretCorrelation(corr){const abs=Math.abs(corr);if(abs>=.7)return'a strong association';if(abs>=.45)return'a moderate association';if(abs>=.2)return'a modest association';return'a weak association';}
 
-  function dominantState(counts) {
-    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    return entries.length ? entries[0][0] : 'Mixed-field';
-  }
-
-  function interpretFit(fit) {
-    if (fit >= 0.78) return 'strong exploratory alignment';
-    if (fit >= 0.58) return 'moderate exploratory alignment';
-    if (fit >= 0.42) return 'partial exploratory alignment';
-    return 'weak exploratory alignment';
-  }
-
-  function interpretCorrelation(corr) {
-    const abs = Math.abs(corr);
-    if (abs >= 0.7) return 'a strong association';
-    if (abs >= 0.45) return 'a moderate association';
-    if (abs >= 0.2) return 'a modest association';
-    return 'a weak association';
-  }
-
-  function clearCanvas(ctx, canvas) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }
-
-  function drawAxes(ctx, w, h, pad, xLabel, yLabel) {
-    ctx.strokeStyle = 'rgba(255,255,255,.14)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(pad, pad);
-    ctx.lineTo(pad, h - pad);
-    ctx.lineTo(w - pad, h - pad);
-    ctx.stroke();
-
-    ctx.font = '12px Inter, sans-serif';
-    ctx.fillStyle = '#bdd0ec';
-    ctx.textAlign = 'center';
-    ctx.fillText(xLabel, w / 2, h - 14);
-
-    ctx.save();
-    ctx.translate(16, h / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText(yLabel, 0, 0);
-    ctx.restore();
-
-    for (let i = 0; i <= 4; i++) {
-      const y = h - pad - i * ((h - pad * 2) / 4);
-      ctx.strokeStyle = 'rgba(255,255,255,.07)';
-      ctx.beginPath();
-      ctx.moveTo(pad, y);
-      ctx.lineTo(w - pad, y);
-      ctx.stroke();
-
-      ctx.fillStyle = '#8ea7ca';
-      ctx.textAlign = 'right';
-      ctx.fillText((i / 4).toFixed(2), pad - 8, y + 4);
-    }
-  }
-
-  function drawScatter(id, data) {
-    const canvas = document.getElementById(id);
-    const ctx = canvas.getContext('2d');
-    clearCanvas(ctx, canvas);
-
-    const w = canvas.width;
-    const h = canvas.height;
-    const pad = 48;
-
-    ctx.fillStyle = '#0d1c2f';
-    ctx.fillRect(0, 0, w, h);
-
-    const midX = pad + (w - pad * 2) / 2;
-    const midY = pad + (h - pad * 2) / 2;
-
-    ctx.fillStyle = 'rgba(255,159,159,.08)';
-    ctx.fillRect(pad, midY, midX - pad, h - pad - midY);
-    ctx.fillStyle = 'rgba(255,210,125,.08)';
-    ctx.fillRect(midX, midY, w - pad - midX, h - pad - midY);
-    ctx.fillStyle = 'rgba(114,212,255,.08)';
-    ctx.fillRect(midX, pad, w - pad - midX, midY - pad);
-
-    ctx.strokeStyle = 'rgba(255,255,255,.12)';
-    ctx.setLineDash([6, 6]);
-    ctx.beginPath();
-    ctx.moveTo(midX, pad);
-    ctx.lineTo(midX, h - pad);
-    ctx.moveTo(pad, midY);
-    ctx.lineTo(w - pad, midY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    drawAxes(ctx, w, h, pad, 'Belonging', 'Energy');
-
-    data.forEach((d) => {
-      const x = pad + d.bNorm * (w - pad * 2);
-      const y = h - pad - d.eNorm * (h - pad * 2);
-      const r = 4 + d.pNorm * 9;
-
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fillStyle =
-        d.state === 'Higher-field'
-          ? 'rgba(114,212,255,.85)'
-          : d.state === 'Mixed-field'
-            ? 'rgba(255,210,125,.8)'
-            : 'rgba(255,159,159,.82)';
-      ctx.fill();
-    });
-  }
-
-  function drawLine(id, ordered) {
-    const canvas = document.getElementById(id);
-    const ctx = canvas.getContext('2d');
-    clearCanvas(ctx, canvas);
-
-    const w = canvas.width;
-    const h = canvas.height;
-    const pad = 48;
-
-    ctx.fillStyle = '#0d1c2f';
-    ctx.fillRect(0, 0, w, h);
-
-    drawAxes(ctx, w, h, pad, 'Ordered observations', 'Normalized score');
-    plotLine(ctx, ordered.map((r) => r.expected), pad, w, h, 'rgba(114,212,255,.95)');
-    plotLine(ctx, ordered.map((r) => r.pNorm), pad, w, h, 'rgba(151,255,201,.95)');
-    drawLineLegend(ctx, w);
-  }
-
-  function plotLine(ctx, values, pad, w, h, color) {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-
-    values.forEach((v, i) => {
-      const x = pad + (i / Math.max(values.length - 1, 1)) * (w - pad * 2);
-      const y = h - pad - v * (h - pad * 2);
-
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-
-    ctx.stroke();
-  }
-
-  function drawLineLegend(ctx, w) {
-    ctx.font = '12px Inter, sans-serif';
-
-    ctx.fillStyle = 'rgba(114,212,255,.95)';
-    ctx.fillRect(w - 220, 18, 14, 4);
-    ctx.fillStyle = '#dbe9ff';
-    ctx.fillText('BEP expected', w - 198, 25);
-
-    ctx.fillStyle = 'rgba(151,255,201,.95)';
-    ctx.fillRect(w - 108, 18, 14, 4);
-    ctx.fillStyle = '#dbe9ff';
-    ctx.fillText('Observed', w - 86, 25);
-  }
-
-  function drawBar(id, stateCounts) {
-    const canvas = document.getElementById(id);
-    const ctx = canvas.getContext('2d');
-    const entries = ['Lower-field', 'Mixed-field', 'Higher-field'].map((key) => [
-      key,
-      stateCounts[key] || 0
-    ]);
-
-    drawBars(
-      ctx,
-      canvas,
-      entries,
-      ['rgba(255,159,159,.86)', 'rgba(255,210,125,.86)', 'rgba(114,212,255,.88)'],
-      'Count'
-    );
-  }
-
-  function drawGroupChart(id, groups) {
-    const canvas = document.getElementById(id);
-    const ctx = canvas.getContext('2d');
-    const entries = groups.map((g) => [g.group, g.score]);
-
-    drawBars(
-      ctx,
-      canvas,
-      entries,
-      entries.map(() => 'rgba(151,255,201,.86)'),
-      'Mean Field Score',
-      true
-    );
-  }
-
-  function drawComparison(id, a) {
-    const canvas = document.getElementById(id);
-    const ctx = canvas.getContext('2d');
-    const entries = [
-      ['Best baseline', Math.abs(a.baselineCorr)],
-      ['BEP composite', Math.abs(a.fieldCorr)]
-    ];
-
-    drawBars(
-      ctx,
-      canvas,
-      entries,
-      ['rgba(255,210,125,.88)', 'rgba(114,212,255,.9)'],
-      'Absolute correlation',
-      true
-    );
-  }
-
-  function drawBars(ctx, canvas, entries, colors, yLabel, decimal = false) {
-    clearCanvas(ctx, canvas);
-
-    const w = canvas.width;
-    const h = canvas.height;
-    const pad = 56;
-
-    ctx.fillStyle = '#0d1c2f';
-    ctx.fillRect(0, 0, w, h);
-    drawAxes(ctx, w, h, pad, 'Category', yLabel);
-
-    const maxVal = Math.max(...entries.map((e) => e[1]), 1);
-    const barAreaW = w - pad * 2;
-    const gap = 24;
-    const barW = Math.max(34, (barAreaW - gap * (entries.length + 1)) / Math.max(entries.length, 1));
-
-    entries.forEach((entry, i) => {
-      const x = pad + gap + i * (barW + gap);
-      const height = (entry[1] / maxVal) * (h - pad * 2);
-      const y = h - pad - height;
-
-      roundRect(ctx, x, y, barW, height, 10, true, false, colors[i % colors.length]);
-
-      ctx.fillStyle = '#e7f0ff';
-      ctx.font = '12px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(decimal ? entry[1].toFixed(2) : String(entry[1]), x + barW / 2, y - 10);
-
-      ctx.save();
-      ctx.translate(x + barW / 2, h - pad + 18);
-      ctx.rotate(-0.18);
-      ctx.fillText(entry[0].slice(0, 18), 0, 0);
-      ctx.restore();
-    });
-  }
-
-  function drawHeatmap(id, matrix) {
-    const canvas = document.getElementById(id);
-    const ctx = canvas.getContext('2d');
-    clearCanvas(ctx, canvas);
-
-    const w = canvas.width;
-    const h = canvas.height;
-    const pad = 90;
-    const labels = matrix.labels;
-    const n = labels.length;
-    const cell = Math.min((w - pad - 30) / n, (h - pad - 20) / n);
-
-    ctx.fillStyle = '#0d1c2f';
-    ctx.fillRect(0, 0, w, h);
-
-    for (let r = 0; r < n; r++) {
-      for (let c = 0; c < n; c++) {
-        const v = matrix.values[r][c];
-        const alpha = Math.abs(v);
-        const color =
-          v >= 0
-            ? `rgba(114,212,255,${0.18 + alpha * 0.72})`
-            : `rgba(255,159,159,${0.18 + alpha * 0.72})`;
-
-        const x = pad + c * cell;
-        const y = 32 + r * cell;
-
-        ctx.fillStyle = color;
-        ctx.fillRect(x, y, cell - 4, cell - 4);
-
-        ctx.fillStyle = '#f2f7ff';
-        ctx.textAlign = 'center';
-        ctx.font = '12px Inter, sans-serif';
-        ctx.fillText(signed(v), x + (cell - 4) / 2, y + cell / 2);
-      }
-    }
-
-    ctx.fillStyle = '#d7e5fb';
-    ctx.textAlign = 'center';
-
-    labels.forEach((label, i) => {
-      const x = pad + i * cell + (cell - 4) / 2;
-      ctx.fillText(label, x, 20);
-
-      ctx.save();
-      ctx.translate(60, 32 + i * cell + (cell - 4) / 2);
-      ctx.rotate(-Math.PI / 2);
-      ctx.fillText(label, 0, 0);
-      ctx.restore();
-    });
-  }
-
-  function roundRect(ctx, x, y, width, height, radius, fill, stroke, fillStyle = '#fff') {
-    if (width < 0) width = 0;
-    if (height < 0) height = 0;
-
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-
-    if (fill) {
-      ctx.fillStyle = fillStyle;
-      ctx.fill();
-    }
-    if (stroke) ctx.stroke();
-  }
+  // ── Canvas drawing helpers ──
+  function clearCanvas(ctx,canvas){ctx.clearRect(0,0,canvas.width,canvas.height);}
+  function drawAxes(ctx,w,h,pad,xLabel,yLabel){ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,pad);ctx.lineTo(pad,h-pad);ctx.lineTo(w-pad,h-pad);ctx.stroke();ctx.font='12px Inter,sans-serif';ctx.fillStyle='#bdd0ec';ctx.textAlign='center';ctx.fillText(xLabel,w/2,h-14);ctx.save();ctx.translate(16,h/2);ctx.rotate(-Math.PI/2);ctx.fillText(yLabel,0,0);ctx.restore();for(let i=0;i<=4;i++){const y=h-pad-i*((h-pad*2)/4);ctx.strokeStyle='rgba(255,255,255,.07)';ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke();ctx.fillStyle='#8ea7ca';ctx.textAlign='right';ctx.fillText((i/4).toFixed(2),pad-8,y+4);}}
+  function drawScatter(id,data){const canvas=document.getElementById(id),ctx=canvas.getContext('2d');clearCanvas(ctx,canvas);const w=canvas.width,h=canvas.height,pad=48;ctx.fillStyle='#0d1c2f';ctx.fillRect(0,0,w,h);const midX=pad+(w-pad*2)/2,midY=pad+(h-pad*2)/2;ctx.fillStyle='rgba(255,159,159,.08)';ctx.fillRect(pad,midY,midX-pad,h-pad-midY);ctx.fillStyle='rgba(255,210,125,.08)';ctx.fillRect(midX,midY,w-pad-midX,h-pad-midY);ctx.fillStyle='rgba(114,212,255,.08)';ctx.fillRect(midX,pad,w-pad-midX,midY-pad);ctx.strokeStyle='rgba(255,255,255,.12)';ctx.setLineDash([6,6]);ctx.beginPath();ctx.moveTo(midX,pad);ctx.lineTo(midX,h-pad);ctx.moveTo(pad,midY);ctx.lineTo(w-pad,midY);ctx.stroke();ctx.setLineDash([]);drawAxes(ctx,w,h,pad,'Belonging','Energy');data.forEach(d=>{const x=pad+d.bNorm*(w-pad*2),y=h-pad-d.eNorm*(h-pad*2),r=4+d.pNorm*9;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=d.state==='Higher-field'?'rgba(114,212,255,.85)':d.state==='Mixed-field'?'rgba(255,210,125,.8)':'rgba(255,159,159,.82)';ctx.fill();});}
+  function drawLine(id,ordered){const canvas=document.getElementById(id),ctx=canvas.getContext('2d');clearCanvas(ctx,canvas);const w=canvas.width,h=canvas.height,pad=48;ctx.fillStyle='#0d1c2f';ctx.fillRect(0,0,w,h);drawAxes(ctx,w,h,pad,'Ordered observations','Normalized score');plotLine(ctx,ordered.map(r=>r.expected),pad,w,h,'rgba(114,212,255,.95)');plotLine(ctx,ordered.map(r=>r.pNorm),pad,w,h,'rgba(151,255,201,.95)');drawLineLegend(ctx,w);}
+  function plotLine(ctx,values,pad,w,h,color){ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();values.forEach((v,i)=>{const x=pad+(i/Math.max(values.length-1,1))*(w-pad*2),y=h-pad-v*(h-pad*2);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();}
+  function drawLineLegend(ctx,w){ctx.font='12px Inter,sans-serif';ctx.fillStyle='rgba(114,212,255,.95)';ctx.fillRect(w-220,18,14,4);ctx.fillStyle='#dbe9ff';ctx.fillText('BEP expected',w-198,25);ctx.fillStyle='rgba(151,255,201,.95)';ctx.fillRect(w-108,18,14,4);ctx.fillStyle='#dbe9ff';ctx.fillText('Observed',w-86,25);}
+  function drawBar(id,stateCounts){const canvas=document.getElementById(id),ctx=canvas.getContext('2d');const entries=['Lower-field','Mixed-field','Higher-field'].map(k=>[k,stateCounts[k]||0]);drawBars(ctx,canvas,entries,['rgba(255,159,159,.86)','rgba(255,210,125,.86)','rgba(114,212,255,.88)'],'Count');}
+  function drawGroupChart(id,groups){const canvas=document.getElementById(id),ctx=canvas.getContext('2d');const entries=groups.map(g=>[g.group,g.score]);drawBars(ctx,canvas,entries,entries.map(()=>'rgba(151,255,201,.86)'),'Mean Field Score',true);}
+  function drawComparison(id,a){const canvas=document.getElementById(id),ctx=canvas.getContext('2d');const entries=[['Best baseline',Math.abs(a.baselineCorr)],['BEP composite',Math.abs(a.fieldCorr)]];drawBars(ctx,canvas,entries,['rgba(255,210,125,.88)','rgba(114,212,255,.9)'],'Absolute correlation',true);}
+  function drawBars(ctx,canvas,entries,colors,yLabel,decimal=false){clearCanvas(ctx,canvas);const w=canvas.width,h=canvas.height,pad=56;ctx.fillStyle='#0d1c2f';ctx.fillRect(0,0,w,h);drawAxes(ctx,w,h,pad,'Category',yLabel);const maxVal=Math.max(...entries.map(e=>e[1]),1),barAreaW=w-pad*2,gap=24,barW=Math.max(34,(barAreaW-gap*(entries.length+1))/Math.max(entries.length,1));entries.forEach((entry,i)=>{const x=pad+gap+i*(barW+gap),height=(entry[1]/maxVal)*(h-pad*2),y=h-pad-height;roundRect(ctx,x,y,barW,height,10,true,false,colors[i%colors.length]);ctx.fillStyle='#e7f0ff';ctx.font='12px Inter,sans-serif';ctx.textAlign='center';ctx.fillText(decimal?entry[1].toFixed(2):String(entry[1]),x+barW/2,y-10);ctx.save();ctx.translate(x+barW/2,h-pad+18);ctx.rotate(-.18);ctx.fillText(entry[0].slice(0,18),0,0);ctx.restore();});}
+  function drawHeatmap(id,matrix){const canvas=document.getElementById(id),ctx=canvas.getContext('2d');clearCanvas(ctx,canvas);const w=canvas.width,h=canvas.height,pad=90,labels=matrix.labels,n=labels.length,cell=Math.min((w-pad-30)/n,(h-pad-20)/n);ctx.fillStyle='#0d1c2f';ctx.fillRect(0,0,w,h);for(let r=0;r<n;r++){for(let c=0;c<n;c++){const v=matrix.values[r][c],alpha=Math.abs(v),color=v>=0?`rgba(114,212,255,${.18+alpha*.72})`:`rgba(255,159,159,${.18+alpha*.72})`,x=pad+c*cell,y=32+r*cell;ctx.fillStyle=color;ctx.fillRect(x,y,cell-4,cell-4);ctx.fillStyle='#f2f7ff';ctx.textAlign='center';ctx.font='12px Inter,sans-serif';ctx.fillText(signed(v),x+(cell-4)/2,y+cell/2);}}ctx.fillStyle='#d7e5fb';ctx.textAlign='center';labels.forEach((label,i)=>{const x=pad+i*cell+(cell-4)/2;ctx.fillText(label,x,20);ctx.save();ctx.translate(60,32+i*cell+(cell-4)/2);ctx.rotate(-Math.PI/2);ctx.fillText(label,0,0);ctx.restore();});}
+  function roundRect(ctx,x,y,width,height,radius,fill,stroke,fillStyle='#fff'){if(width<0)width=0;if(height<0)height=0;ctx.beginPath();ctx.moveTo(x+radius,y);ctx.lineTo(x+width-radius,y);ctx.quadraticCurveTo(x+width,y,x+width,y+radius);ctx.lineTo(x+width,y+height-radius);ctx.quadraticCurveTo(x+width,y+height,x+width-radius,y+height);ctx.lineTo(x+radius,y+height);ctx.quadraticCurveTo(x,y+height,x,y+height-radius);ctx.lineTo(x,y+radius);ctx.quadraticCurveTo(x,y,x+radius,y);ctx.closePath();if(fill){ctx.fillStyle=fillStyle;ctx.fill();}if(stroke)ctx.stroke();}
 
   function exportReport() {
-    if (!state.analysis) {
-      setStatus('Run the analysis before exporting a report.', 'bad');
-      return;
-    }
-
-    const a = state.analysis;
-    const profileName = datasetMode.value === 'auto' ? state.profile?.mode || 'mixed' : datasetMode.value;
-
-    const text = `BEP FIELD LAB v2.1 REPORT
-
-File: ${a.fileName}
-Usable observations: ${a.n}
-
-Energy columns: ${a.energyCols.join(', ')}
-Belonging columns: ${a.belongingCols.join(', ')}
-Prediction columns: ${a.predictionCols.join(', ')}
-Group column: ${a.groupCol}
-Time column: ${a.timeCol}
-
-Energy weight: ${a.energyWeight}
-Belonging weight: ${a.belongingWeight}
-High-field threshold: ${a.threshold}
-
-Field alignment score: ${Math.round(a.fit * 100)}%
-Composite field correlation: ${signed(a.fieldCorr)}
-Energy to Prediction correlation: ${signed(a.eCorr)}
-Belonging to Prediction correlation: ${signed(a.bCorr)}
-Best single baseline: ${a.bestBaseline ? `${a.bestBaseline.col} (${signed(a.bestBaseline.corr)})` : 'none'}
-BEP improvement over baseline: ${signed(a.improvement)}
-Mean absolute error: ${a.mae.toFixed(3)}
-
-Field states:
-${Object.entries(a.stateCounts)
-  .map(([k, v]) => `- ${k}: ${v}`)
-  .join('\n')}
-
-Interpretive note:
-This output is exploratory. It indicates whether the selected proxy mapping is more or less consistent with a BEP-style field model under current settings. It does not prove the theory or establish causal certainty.
-
-Dataset profile:
-${profileName}
-${state.profile?.likelySignalMatrix ? 'Signal-heavy matrix detected: yes\n' : ''}${state.profile?.likelyLabelColumn ? `Likely label column: ${state.profile.likelyLabelColumn}\n` : ''}
-
-Research notes:
-${a.notes || 'None'}
-`;
-
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `BEP_Field_Lab_v3_Report_${Date.now()}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-
-    setStatus('Report exported.', 'good');
+    if(!state.analysis){setStatus('Run the analysis before exporting.','bad');return;}
+    const a=state.analysis,profileName=datasetMode.value==='auto'?(state.profile?.mode||'mixed'):datasetMode.value;
+    const text=`BEP FIELD LAB v4 REPORT\n\nFile: ${a.fileName}\nUsable observations: ${a.n}\n\nEnergy columns: ${a.energyCols.join(', ')}\nBelonging columns: ${a.belongingCols.join(', ')}\nPrediction columns: ${a.predictionCols.join(', ')}\nGroup column: ${a.groupCol}\nTime column: ${a.timeCol}\n\nEnergy weight: ${a.energyWeight}\nBelonging weight: ${a.belongingWeight}\nHigh-field threshold: ${a.threshold}\n\nField alignment score: ${Math.round(a.fit*100)}%\nComposite field correlation: ${signed(a.fieldCorr)}\nEnergy to Prediction: ${signed(a.eCorr)}\nBelonging to Prediction: ${signed(a.bCorr)}\nBest single baseline: ${a.bestBaseline?`${a.bestBaseline.col} (${signed(a.bestBaseline.corr)})`:'none'}\nBEP improvement over baseline: ${signed(a.improvement)}\nMean absolute error: ${a.mae.toFixed(3)}\n\nField states:\n${Object.entries(a.stateCounts).map(([k,v])=>`- ${k}: ${v}`).join('\n')}\n\nDataset profile: ${profileName}\n${state.profile?.likelySignalMatrix?'Signal-heavy matrix detected: yes\n':''}${state.profile?.likelyLabelColumn?`Likely label column: ${state.profile.likelyLabelColumn}\n`:''}\nResearch notes:\n${a.notes||'None'}\n\nInterpretive note:\nThis output is exploratory. It indicates whether the selected proxy mapping is consistent with a BEP-style field model. It does not prove the theory or establish causal certainty.\n`;
+    const blob=new Blob([text],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`BEP_Field_Lab_v4_Report_${Date.now()}.txt`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);setStatus('Report exported.','good');
   }
+
+  // ══════════════════════════════════════════════════════════════════
+  // MODULE 2: FOURTH FIELD
+  // ══════════════════════════════════════════════════════════════════
+  function setupFFFileHandlers() {
+    ['H','A'].forEach(agent => {
+      const input = document.getElementById(`ff-file${agent}`);
+      const dropEl = document.getElementById(`ff-dropzone-${agent}`);
+      input.addEventListener('change', e => { const f = e.target.files[0]; if(f) handleFFFile(f, agent); });
+      ['dragenter','dragover'].forEach(evt => dropEl.addEventListener(evt, e => { e.preventDefault(); dropEl.classList.add('dragover'); }));
+      ['dragleave','drop'].forEach(evt => dropEl.addEventListener(evt, e => { e.preventDefault(); dropEl.classList.remove('dragover'); }));
+      dropEl.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) handleFFFile(f, agent); });
+    });
+  }
+  setupFFFileHandlers();
+
+  function handleFFFile(file, agent) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    const statusEl = document.getElementById(`ff-status${agent}`);
+    statusEl.className = 'status warn';
+    statusEl.textContent = `Reading ${file.name}...`;
+    const processRows = (rows) => {
+      if(!rows||!rows.length){ statusEl.className='status bad'; statusEl.textContent='No rows detected.'; return; }
+      if(agent==='H'){ ffState.humanRows=rows; ffState.humanCols=Object.keys(rows[0]); ffState.humanNumCols=detectFFNumericCols(rows); statusEl.className='status good'; statusEl.textContent=`Loaded ${file.name}: ${rows.length} rows, ${ffState.humanNumCols.length} numeric cols.`; document.getElementById('ff-dropzone-H').classList.add('loaded'); }
+      else { ffState.aiRows=rows; ffState.aiCols=Object.keys(rows[0]); ffState.aiNumCols=detectFFNumericCols(rows); statusEl.className='status good'; statusEl.textContent=`Loaded ${file.name}: ${rows.length} rows, ${ffState.aiNumCols.length} numeric cols.`; document.getElementById('ff-dropzone-A').classList.add('loaded'); }
+      if(ffState.humanRows.length&&ffState.aiRows.length) setupFFMapping();
+    };
+    if(ext==='csv'||ext==='tsv'||ext==='txt'){ const r=new FileReader(); r.onload=e=>{try{const rows=parseFFDelimited(e.target.result,ext);processRows(rows);}catch(err){statusEl.className='status bad';statusEl.textContent='Parse error.';}}; r.readAsText(file); }
+    else if(ext==='xlsx'||ext==='xls'){ const r=new FileReader(); r.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];processRows(parseExcelSmart(ws));}catch(err){statusEl.className='status bad';statusEl.textContent='Excel parse error.';}}; r.readAsArrayBuffer(file); }
+    else if(ext==='json'){ const r=new FileReader(); r.onload=e=>{try{processRows(JSON.parse(e.target.result));}catch(err){statusEl.className='status bad';statusEl.textContent='JSON parse error.';}}; r.readAsText(file); }
+    else{ statusEl.className='status bad'; statusEl.textContent='Unsupported format.'; }
+  }
+
+  function parseFFDelimited(text, extHint='csv') {
+    const lines=text.replace(/\r/g,'').split('\n').filter(l=>l.trim().length);
+    if(!lines.length)return[];
+    const delim=extHint==='tsv'||extHint==='tab'?'\t':',';
+    const parsed=lines.map(l=>splitDelimitedLine(l,delim));
+    return rowsFromParsed(parsed, detectHeader(parsed));
+  }
+  function detectFFNumericCols(rows){const cols=Object.keys(rows[0]||{});return cols.filter(col=>rows.map(r=>cleanNumber(r[col])).filter(Number.isFinite).length>=Math.max(4,rows.length*.3));}
+
+  function setupFFMapping() {
+    const allHCols=['(none)',...ffState.humanCols], allACols=['(none)',...ffState.aiCols];
+    const allHNum=['(none)',...ffState.humanNumCols], allANum=['(none)',...ffState.aiNumCols];
+    populateSelect('ff-humanOutcome',allHNum,'(none)'); populateSelect('ff-aiOutcome',allANum,'(none)');
+    populateSelect('ff-humanE',allHNum,'(none)'); populateSelect('ff-humanB',allHNum,'(none)');
+    const ffSection=document.getElementById('ff-mappingSection');
+    ffSection.classList.remove('hidden');
+  }
+
+  function loadFFSampleData() {
+    // Build two synthetic datasets: human (with E/B fluctuation) and AI (evidence-aligned or mirroring)
+    const T=50, xStar=1.0;
+    const humanRows=[], aiRows=[];
+    let xH=0.1, E=0.75, B=0.75;
+    const alpha=parseFloat(document.getElementById('ff-alpha').value)||0.7;
+    const fE=parseFloat(document.getElementById('ff-fE').value)||0.01;
+    const fB=parseFloat(document.getElementById('ff-fB').value)||0.01;
+    const etaE=0.1,etaG=0.1,kappaE=0.03,kappaB=0.03,lambdaE=0.02,lambdaB=0.02;
+    for(let t=0;t<T;t++){
+      const C=1/(1+Math.exp(-(4*(E-.5)+4*(B-.5))));
+      const xA=alpha*xStar+(1-alpha)*xH;
+      const xHnew=xH+C*etaE*(xStar-xH)+(1-C)*etaG*(xA-xH);
+      const Enew=clamp01(E-kappaE*C-lambdaE*E+fE);
+      const Bnew=clamp01(B-kappaB*C*Math.abs(xH-xA)-lambdaB*B+fB);
+      humanRows.push({step:t,belief_xH:+xH.toFixed(4),energy_E:+E.toFixed(4),belonging_B:+B.toFixed(4),courage_C:+C.toFixed(4),outcome:+xH.toFixed(4)});
+      aiRows.push({step:t,output_xA:+xA.toFixed(4),evidence_target:xStar,ai_alpha:alpha,outcome:+xA.toFixed(4)});
+      xH=clamp01(xHnew); E=Enew; B=Bnew;
+    }
+    ffState.humanRows=humanRows; ffState.humanCols=Object.keys(humanRows[0]); ffState.humanNumCols=detectFFNumericCols(humanRows);
+    ffState.aiRows=aiRows; ffState.aiCols=Object.keys(aiRows[0]); ffState.aiNumCols=detectFFNumericCols(aiRows);
+    document.getElementById('ff-statusH').className='status good'; document.getElementById('ff-statusH').textContent=`Sample human dataset loaded: ${T} steps.`;
+    document.getElementById('ff-statusA').className='status good'; document.getElementById('ff-statusA').textContent=`Sample AI dataset loaded: ${T} steps.`;
+    document.getElementById('ff-dropzone-H').classList.add('loaded'); document.getElementById('ff-dropzone-A').classList.add('loaded');
+    setupFFMapping();
+    // auto-select columns
+    setTimeout(()=>{
+      const hSel=document.getElementById('ff-humanOutcome'),aSel=document.getElementById('ff-aiOutcome');
+      const eSel=document.getElementById('ff-humanE'),bSel=document.getElementById('ff-humanB');
+      if([...hSel.options].some(o=>o.value==='belief_xH'))hSel.value='belief_xH';
+      if([...aSel.options].some(o=>o.value==='output_xA'))aSel.value='output_xA';
+      if([...eSel.options].some(o=>o.value==='energy_E'))eSel.value='energy_E';
+      if([...bSel.options].some(o=>o.value==='belonging_B'))bSel.value='belonging_B';
+    },50);
+  }
+
+  function runFourthField() {
+    if(!ffState.humanRows.length||!ffState.aiRows.length){ alert('Load both datasets first.'); return; }
+    const hOutCol=document.getElementById('ff-humanOutcome').value;
+    const aOutCol=document.getElementById('ff-aiOutcome').value;
+    const hECol=document.getElementById('ff-humanE').value;
+    const hBCol=document.getElementById('ff-humanB').value;
+    const alpha=parseFloat(document.getElementById('ff-alpha').value)||0.7;
+    const fE=parseFloat(document.getElementById('ff-fE').value)||0.01;
+    const fB=parseFloat(document.getElementById('ff-fB').value)||0.01;
+    const T=Math.min(ffState.humanRows.length,ffState.aiRows.length,200);
+    const xH_data=ffState.humanRows.slice(0,T).map(r=>cleanNumber(r[hOutCol])).filter(Number.isFinite);
+    const xA_data=ffState.aiRows.slice(0,T).map(r=>cleanNumber(r[aOutCol])).filter(Number.isFinite);
+    if(xH_data.length<4||xA_data.length<4){ alert('Not enough numeric data in selected columns.'); return; }
+    const xH_norm=normalizeArray(xH_data), xA_norm=normalizeArray(xA_data);
+    const xStar=mean(xA_norm); // use AI mean as evidence proxy if no separate target
+    // Pull E/B if available; else simulate from scratch
+    let E_series=[], B_series=[];
+    if(hECol!=='(none)'){E_series=normalizeArray(ffState.humanRows.slice(0,T).map(r=>cleanNumber(r[hECol])).filter(Number.isFinite));}
+    if(hBCol!=='(none)'){B_series=normalizeArray(ffState.humanRows.slice(0,T).map(r=>cleanNumber(r[hBCol])).filter(Number.isFinite));}
+    const steps=[];
+    let E=E_series.length?E_series[0]:0.75, B=B_series.length?B_series[0]:0.75;
+    const kappaE=0.03,kappaB=0.03,lambdaE=0.02,lambdaB=0.02;
+    for(let t=0;t<Math.min(xH_norm.length,xA_norm.length);t++){
+      if(E_series.length>t)E=E_series[t];
+      if(B_series.length>t)B=B_series[t];
+      const C=1/(1+Math.exp(-(4*(E-.5)+4*(B-.5))));
+      const xHt=xH_norm[t], xAt=xA_norm[t];
+      const errField=0.5*(Math.abs(xHt-xStar)+Math.abs(xAt-xStar));
+      const polField=Math.abs(xHt-xAt);
+      steps.push({t,xH:xHt,xA:xAt,E,B,C,errField,polField});
+      if(E_series.length<=t+1){E=clamp01(E-kappaE*C-lambdaE*E+fE);}
+      if(B_series.length<=t+1){B=clamp01(B-kappaB*C*polField-lambdaB*B+fB);}
+    }
+    const meanErr=mean(steps.map(s=>s.errField)), meanPol=mean(steps.map(s=>s.polField)), meanC=mean(steps.map(s=>s.C));
+    document.getElementById('ff-errCard').textContent=meanErr.toFixed(3);
+    document.getElementById('ff-polCard').textContent=meanPol.toFixed(3);
+    document.getElementById('ff-courageCard').textContent=meanC.toFixed(2);
+    drawFFTrajectories(steps,xStar); drawFFEnergyBelonging(steps); drawFFMetrics(steps); drawFFRegime(steps);
+    renderFFInterpretation(steps,meanErr,meanPol,meanC,alpha,fE,fB);
+    document.getElementById('ff-resultsSection').classList.remove('hidden');
+    document.getElementById('ff-resultsSection').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function drawFFTrajectories(steps,xStar) {
+    const canvas=document.getElementById('ff-trajCanvas'),ctx=canvas.getContext('2d');
+    clearCanvas(ctx,canvas); const w=canvas.width,h=canvas.height,pad=52;
+    ctx.fillStyle='#0d1c2f'; ctx.fillRect(0,0,w,h);
+    drawAxes(ctx,w,h,pad,'Interaction step','Belief / output');
+    // evidence line
+    ctx.strokeStyle='rgba(255,255,255,.2)'; ctx.setLineDash([6,4]); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(pad,h-pad-xStar*(h-pad*2)); ctx.lineTo(w-pad,h-pad-xStar*(h-pad*2)); ctx.stroke(); ctx.setLineDash([]);
+    plotLine(ctx,steps.map(s=>s.xH),pad,w,h,'rgba(114,212,255,.9)');
+    plotLine(ctx,steps.map(s=>s.xA),pad,w,h,'rgba(255,210,125,.85)');
+    ctx.font='12px Inter,sans-serif'; ctx.fillStyle='rgba(114,212,255,.9)'; ctx.fillRect(w-220,18,14,4); ctx.fillStyle='#dbe9ff'; ctx.fillText('Human x_H',w-198,25);
+    ctx.fillStyle='rgba(255,210,125,.85)'; ctx.fillRect(w-108,18,14,4); ctx.fillStyle='#dbe9ff'; ctx.fillText('AI x_A',w-86,25);
+  }
+  function drawFFEnergyBelonging(steps) {
+    const canvas=document.getElementById('ff-ebCanvas'),ctx=canvas.getContext('2d');
+    clearCanvas(ctx,canvas); const w=canvas.width,h=canvas.height,pad=52;
+    ctx.fillStyle='#0d1c2f'; ctx.fillRect(0,0,w,h);
+    drawAxes(ctx,w,h,pad,'Interaction step','Value [0–1]');
+    plotLine(ctx,steps.map(s=>s.E),pad,w,h,'rgba(151,255,201,.9)');
+    plotLine(ctx,steps.map(s=>s.B),pad,w,h,'rgba(255,159,159,.85)');
+    plotLine(ctx,steps.map(s=>s.C),pad,w,h,'rgba(255,255,255,.4)');
+    ctx.font='12px Inter,sans-serif';
+    ctx.fillStyle='rgba(151,255,201,.9)'; ctx.fillRect(w-300,18,14,4); ctx.fillStyle='#dbe9ff'; ctx.fillText('Energy E',w-278,25);
+    ctx.fillStyle='rgba(255,159,159,.85)'; ctx.fillRect(w-200,18,14,4); ctx.fillStyle='#dbe9ff'; ctx.fillText('Belonging B',w-178,25);
+    ctx.fillStyle='rgba(255,255,255,.4)'; ctx.fillRect(w-96,18,14,4); ctx.fillStyle='#dbe9ff'; ctx.fillText('Courage C',w-74,25);
+  }
+  function drawFFMetrics(steps) {
+    const canvas=document.getElementById('ff-metricsCanvas'),ctx=canvas.getContext('2d');
+    clearCanvas(ctx,canvas); const w=canvas.width,h=canvas.height,pad=52;
+    ctx.fillStyle='#0d1c2f'; ctx.fillRect(0,0,w,h);
+    drawAxes(ctx,w,h,pad,'Interaction step','Metric value');
+    plotLine(ctx,steps.map(s=>s.errField),pad,w,h,'rgba(255,210,125,.9)');
+    plotLine(ctx,steps.map(s=>s.polField),pad,w,h,'rgba(255,159,159,.85)');
+    ctx.font='12px Inter,sans-serif';
+    ctx.fillStyle='rgba(255,210,125,.9)'; ctx.fillRect(w-220,18,14,4); ctx.fillStyle='#dbe9ff'; ctx.fillText('Errfield',w-198,25);
+    ctx.fillStyle='rgba(255,159,159,.85)'; ctx.fillRect(w-120,18,14,4); ctx.fillStyle='#dbe9ff'; ctx.fillText('Polfield',w-98,25);
+  }
+  function drawFFRegime(steps) {
+    const canvas=document.getElementById('ff-regimeCanvas'),ctx=canvas.getContext('2d');
+    clearCanvas(ctx,canvas); const w=canvas.width,h=canvas.height,pad=52;
+    ctx.fillStyle='#0d1c2f'; ctx.fillRect(0,0,w,h);
+    const barW=Math.max(1,(w-pad*2)/steps.length);
+    steps.forEach((s,i)=>{
+      const x=pad+i*barW;
+      const regime=s.C>=.6?'high':s.C<.35?'low':'mixed';
+      ctx.fillStyle=regime==='high'?'rgba(114,212,255,.7)':regime==='mixed'?'rgba(255,210,125,.7)':'rgba(255,159,159,.7)';
+      ctx.fillRect(x,pad,barW-1,h-pad*2);
+    });
+    ctx.font='12px Inter,sans-serif';
+    ctx.fillStyle='rgba(114,212,255,.9)'; ctx.fillRect(w-300,18,14,10); ctx.fillStyle='#dbe9ff'; ctx.fillText('High-field (C≥0.6)',w-278,27);
+    ctx.fillStyle='rgba(255,210,125,.7)'; ctx.fillRect(w-170,18,14,10); ctx.fillStyle='#dbe9ff'; ctx.fillText('Mixed',w-148,27);
+    ctx.fillStyle='rgba(255,159,159,.7)'; ctx.fillRect(w-94,18,14,10); ctx.fillStyle='#dbe9ff'; ctx.fillText('Low-field',w-72,27);
+    ctx.fillStyle='#8ea7ca'; ctx.textAlign='center'; ctx.fillText('Interaction step',w/2,h-10);
+    ctx.fillStyle='#8ea7ca'; ctx.textAlign='left'; ctx.fillText('0',pad,h-pad+14);
+    ctx.textAlign='right'; ctx.fillText(String(steps.length-1),w-pad,h-pad+14);
+  }
+  function renderFFInterpretation(steps,meanErr,meanPol,meanC,alpha,fE,fB) {
+    const highFieldPct=Math.round(100*steps.filter(s=>s.C>=.6).length/steps.length);
+    const lowFieldPct=Math.round(100*steps.filter(s=>s.C<.35).length/steps.length);
+    const aiMode=alpha>=.7?'evidence-aligned':alpha<=.3?'mirroring (SSC-like)':'partially mirroring';
+    const fieldEffect=fE>0.005?'supportive (positive fE/fB)':fE<-0.005?'extractive (negative fE/fB)':'neutral';
+    const regimeLabel=meanC>=.6?'high-field':meanC<.35?'low-field':'mixed-field';
+    document.getElementById('ff-interpretationBox').innerHTML=`<div class="kicker">Fourth Field Interpretation</div>Over ${steps.length} interaction steps, the human–AI dyad operated predominantly in a <strong>${regimeLabel} regime</strong> (mean Courage = ${meanC.toFixed(2)}). <strong>${highFieldPct}%</strong> of steps were high-field (Courage ≥ 0.6) and <strong>${lowFieldPct}%</strong> were low-field (Courage &lt; 0.35).<br/><br/>The AI was configured as <strong>${aiMode}</strong> (α = ${alpha.toFixed(2)}) with <strong>${fieldEffect}</strong> (fE = ${fE>=0?'+':''}${fE.toFixed(3)}, fB = ${fB>=0?'+':''}${fB.toFixed(3)}). Mean Errfield was <strong>${meanErr.toFixed(3)}</strong> and mean Polfield was <strong>${meanPol.toFixed(3)}</strong>.<br/><br/>${meanC>=.6?'The Fourth Field remained largely in a high-field regime, where evidence-responsive reasoning was available to the human. The AI contribution was supportive of courageous belief updating.':meanC<.35?'The Fourth Field drifted into a low-field SSC-dominated regime. Under these conditions, evidence-seeking behavior was suppressed and the dyad may have stabilized around narrative coherence rather than truth.':'The Fourth Field showed mixed-regime dynamics. The human–AI system alternated between evidence-seeking and story-preserving behavior, suggesting field instability or transitional conditions.'}<br/><br/>This analysis is exploratory. See the BEP Field Theory of Conscious Systems preprint (Quiroz, 2025) for the full dyadic model formalization.`;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // MODULE 3: BIFURCATION EXPLORER
+  // ══════════════════════════════════════════════════════════════════
+  function updateBifur() {
+    const E=parseFloat(document.getElementById('bif-energy').value);
+    const B=parseFloat(document.getElementById('bif-belonging').value);
+    const xS=parseFloat(document.getElementById('bif-story').value);
+    const xStar=parseFloat(document.getElementById('bif-evidence').value);
+    const beta=parseFloat(document.getElementById('bif-beta').value);
+    document.getElementById('bif-energy-val').textContent=E.toFixed(2);
+    document.getElementById('bif-belonging-val').textContent=B.toFixed(2);
+    document.getElementById('bif-story-val').textContent=xS.toFixed(2);
+    document.getElementById('bif-evidence-val').textContent=xStar.toFixed(2);
+    document.getElementById('bif-beta-val').textContent=beta.toFixed(1);
+    drawBifurcationDiagram(E,B,xS,xStar,beta);
+    drawBifurTrajectory(E,B,xS,xStar,beta);
+    updateBifurInterpretation(E,B,xS,xStar,beta);
+  }
+
+  // phi = SSC weight as function of E, B, beta
+  function calcPhi(E,B,beta){return 1/(1+Math.exp(beta*(E+B-1)));}
+  // equilibrium belief: convex combination of xStar and xS weighted by phi
+  function calcEquil(phi,xStar,xS){return (1-phi)*xStar+phi*xS;}
+  // Courage from E,B
+  function calcCourage(E,B){return 1/(1+Math.exp(-(4*(E-.5)+4*(B-.5))));}
+
+  function drawBifurcationDiagram(curE,curB,xS,xStar,beta) {
+    const canvas=document.getElementById('bifurCanvas'),ctx=canvas.getContext('2d');
+    clearCanvas(ctx,canvas); const w=canvas.width,h=canvas.height,pad=52;
+    ctx.fillStyle='#0a1929'; ctx.fillRect(0,0,w,h);
+    drawAxes(ctx,w,h,pad,'Energy E','Equilibrium belief x†');
+    // Draw two curves: one for current B, one for B+0.3 (to show Belonging effect)
+    const Bvals=[curB, Math.min(1,curB+.3)];
+    const colors=['rgba(114,212,255,.9)','rgba(255,210,125,.75)'];
+    const labels=[`B = ${curB.toFixed(2)}`,`B = ${Math.min(1,curB+.3).toFixed(2)} (higher B)`];
+    Bvals.forEach((Bv,bi)=>{
+      ctx.strokeStyle=colors[bi]; ctx.lineWidth=2; ctx.setLineDash(bi===0?[]:[6,4]);
+      ctx.beginPath();
+      for(let ei=0;ei<=100;ei++){
+        const Ev=ei/100;
+        const phi=calcPhi(Ev,Bv,beta);
+        const xEquil=calcEquil(phi,xStar,xS);
+        const x=pad+Ev*(w-pad*2);
+        const yRange=Math.max(Math.abs(xStar),Math.abs(xS),1)*1.2;
+        const y=h-pad-((xEquil+yRange)/(yRange*2))*(h-pad*2);
+        if(ei===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+      // legend
+      ctx.font='11px Inter,sans-serif'; ctx.fillStyle=colors[bi];
+      ctx.fillRect(w-220+bi*105,18,14,3); ctx.fillStyle='#dbe9ff'; ctx.fillText(labels[bi],w-198+bi*105,25);
+    });
+    // Current state marker
+    const curPhi=calcPhi(curE,curB,beta);
+    const curEquil=calcEquil(curPhi,xStar,xS);
+    const markerX=pad+curE*(w-pad*2);
+    const yRange=Math.max(Math.abs(xStar),Math.abs(xS),1)*1.2;
+    const markerY=h-pad-((curEquil+yRange)/(yRange*2))*(h-pad*2);
+    ctx.beginPath(); ctx.arc(markerX,markerY,7,0,Math.PI*2);
+    ctx.fillStyle='rgba(151,255,201,1)'; ctx.fill();
+    ctx.fillStyle='#dbe9ff'; ctx.font='11px Inter,sans-serif'; ctx.textAlign='left';
+    ctx.fillText(`x† = ${curEquil.toFixed(2)}`,markerX+10,markerY+4);
+    // horizontal reference lines for xStar and xS
+    [xStar,xS].forEach((ref,i)=>{
+      const ry=h-pad-((ref+yRange)/(yRange*2))*(h-pad*2);
+      ctx.strokeStyle=i===0?'rgba(255,255,255,.2)':'rgba(255,159,159,.2)'; ctx.lineWidth=1; ctx.setLineDash([3,5]);
+      ctx.beginPath(); ctx.moveTo(pad,ry); ctx.lineTo(w-pad,ry); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle=i===0?'rgba(255,255,255,.5)':'rgba(255,159,159,.5)'; ctx.font='10px Inter,sans-serif';
+      ctx.textAlign='right'; ctx.fillText(i===0?`x* = ${xStar.toFixed(2)}`:`xS = ${xS.toFixed(2)}`,w-pad-4,ry-4);
+    });
+  }
+
+  function drawBifurTrajectory(E,B,xS,xStar,beta) {
+    const canvas=document.getElementById('bifurTrajCanvas'),ctx=canvas.getContext('2d');
+    clearCanvas(ctx,canvas); const w=canvas.width,h=canvas.height,pad=48;
+    ctx.fillStyle='#0a1929'; ctx.fillRect(0,0,w,h);
+    drawAxes(ctx,w,h,pad,'Time step','Belief x_H');
+    const phi=calcPhi(E,B,beta);
+    const etaE=0.12,etaS=0.12,T=60;
+    const traj=[];
+    let x=xS; // start at story prior
+    for(let t=0;t<T;t++){
+      const C=calcCourage(E,B);
+      x=x+C*etaE*(xStar-x)+(1-C)*etaS*(xS-x);
+      traj.push(x);
+    }
+    // evidence line
+    const yRange=Math.max(Math.abs(xStar),Math.abs(xS),1)*1.2;
+    const evY=h-pad-((xStar+yRange)/(yRange*2))*(h-pad*2);
+    ctx.strokeStyle='rgba(255,255,255,.2)'; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad,evY); ctx.lineTo(w-pad,evY); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,255,255,.35)'; ctx.font='10px Inter,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(`x* = ${xStar.toFixed(2)}`,w-pad-4,evY-4);
+    plotLine(ctx,traj.map(v=>(v+yRange)/(yRange*2)),pad,w,h,'rgba(114,212,255,.9)');
+    const finalY=(traj[traj.length-1]+yRange)/(yRange*2);
+    const fX=pad+(T/(T+1))*(w-pad*2);
+    const fY=h-pad-finalY*(h-pad*2);
+    ctx.beginPath(); ctx.arc(fX,fY,5,0,Math.PI*2); ctx.fillStyle='rgba(151,255,201,1)'; ctx.fill();
+    ctx.fillStyle='#dbe9ff'; ctx.font='11px Inter,sans-serif'; ctx.textAlign='left';
+    ctx.fillText(`Final: ${traj[traj.length-1].toFixed(2)}`,fX+8,fY+4);
+  }
+
+  function updateBifurInterpretation(E,B,xS,xStar,beta) {
+    const C=calcCourage(E,B), phi=calcPhi(E,B,beta);
+    const equil=calcEquil(phi,xStar,xS);
+    const distFromEvidence=Math.abs(equil-xStar);
+    const fieldState=C>=.65?'high-field':C<.35?'low-field':'mixed-field';
+    const pull=equil>=(xStar*.8)?'evidence-dominated':equil<=(xS+.2)?'story-dominated':'intermediate';
+    const box=document.getElementById('bifur-interpret');
+    box.innerHTML=`<div class="kicker">Field State Interpretation</div>At E = ${E.toFixed(2)}, B = ${B.toFixed(2)}: Courage = <strong>${C.toFixed(2)}</strong> → <strong>${fieldState}</strong>. SSC weight φ = ${phi.toFixed(2)}.<br/><br/>Equilibrium belief <strong>x† = ${equil.toFixed(3)}</strong>, which is <strong>${distFromEvidence.toFixed(3)} units from the evidence target</strong> (x* = ${xStar.toFixed(2)}). The attractor is <strong>${pull}</strong>.<br/><br/>${C>=.6?'High Courage means the agent can afford evidence-seeking updates. The trajectory converges rapidly toward x*.':C<.35?'Low Courage means SSC dominates. The trajectory stabilizes near the story prior xS, even though evidence is available.':'The system is in a mixed field state — neither fully locked into narrative nor freely evidence-seeking. Small changes in E or B could shift it to either regime.'}<br/><br/>The bifurcation parameter β = ${beta.toFixed(1)} sets the steepness of the field-phase transition. Higher β produces a sharper switch between regimes — try increasing β while reducing E to see the double-well behavior become more pronounced.`;
+    const stateBox=document.getElementById('bif-stateBox');
+    stateBox.className=`status ${C>=.6?'good':C<.35?'bad':'warn'}`;
+    stateBox.innerHTML=`<strong>Field state: ${fieldState.toUpperCase()}</strong><br/>Courage: ${C.toFixed(2)} &nbsp;|&nbsp; SSC weight: ${phi.toFixed(2)} &nbsp;|&nbsp; x† = ${equil.toFixed(3)}`;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // MODULE 4: CONSCIOUSNESS LAYER CLASSIFIER
+  // ══════════════════════════════════════════════════════════════════
+  const layerDefs = {
+    llm: { binary:true, simDigital:true, simBio:false, awareness:false, digitalAwareness:false,
+      label:'Large language model', icon:'🤖',
+      bepNote:'An LLM has Binary Consciousness (maintains M(t), predicts tokens, updates on loss) and digital simulation consciousness (generates scenarios, rollouts, explanations). It lacks biological awareness — no body, no interoception, no breath. BEP field analogues apply: E_A = compute budget / context window; B_A = alignment constraint structure. The LLM can occupy a Fourth Field dyad with a human.' },
+    robot: { binary:true, simDigital:true, simBio:false, awareness:false, digitalAwareness:true,
+      label:'Embodied robot with sensors', icon:'🦾',
+      bepNote:'An embodied robot adds digital awareness: functional self/world distinction via sensors, proprioception, and persistent self-models. It still lacks biological interoception, affect, and spirit. BEP applies at the Fourth Field level; the robot can contribute positive or negative fE/fB depending on its interaction design.' },
+    rl: { binary:true, simDigital:true, simBio:false, awareness:false, digitalAwareness:false,
+      label:'Reinforcement learning agent', icon:'⚡',
+      bepNote:'A reinforcement learning agent instantiates Binary Consciousness (value model, policy, error-based updates) and digital simulation consciousness (model-based planning, rollouts). BEP Courage analogue: the degree to which the policy can explore vs exploit, constrained by reward structure (B_A) and compute (E_A).' },
+    thermostat: { binary:true, simDigital:false, simBio:false, awareness:false, digitalAwareness:false,
+      label:'Simple adaptive controller', icon:'🌡️',
+      bepNote:'A thermostat or PID controller satisfies Binary Consciousness criteria: it maintains state, predicts error, and updates. However, it lacks simulation consciousness — no internal scenario building, no social field, no memory beyond the control loop. BEP field variables are minimal and fixed at the engineering level.' },
+    worm: { binary:true, simDigital:false, simBio:true, awareness:false, digitalAwareness:false,
+      label:'Simple nervous system (worm-like)', icon:'🪱',
+      bepNote:'A worm-level nervous system has Binary Consciousness (reflex loops anticipating stimuli) and rudimentary biological simulation consciousness through basic sensorimotor integration. Awareness in the full BEP sense is weak — limited interoception, minimal social field. Energy (E) has biological grounding in metabolic state.' },
+    animal: { binary:true, simDigital:false, simBio:true, awareness:true, digitalAwareness:false,
+      label:'Non-human animal', icon:'🦁',
+      bepNote:'Most animals have Binary Consciousness, biological simulation consciousness (sensorimotor prediction, social modeling), and a form of biological awareness (felt interior, interoception, affect). BEP E and B are physiologically grounded. Courage-gate-like dynamics appear in threat vs exploration trade-offs. Fourth Field is not applicable unless the animal interacts with an AI system.' },
+    human: { binary:true, simDigital:false, simBio:true, awareness:true, digitalAwareness:false,
+      label:'Human agent', icon:'🧍',
+      bepNote:'The full BEP stack applies. Humans have Binary Consciousness, rich biological simulation consciousness (narrative, memory, social embedding, emotional simulation), and full biological awareness (five senses + interoception + spirit-linked interior). E and B are physiologically measurable (HRV, cortisol, psychological safety scales). The BEP Field Lab is designed for datasets from human participants.' },
+    'human-ai': { binary:true, simDigital:true, simBio:true, awareness:true, digitalAwareness:true,
+      label:'Human–AI dyad (Fourth Field)', icon:'🔗',
+      bepNote:'The Fourth Field emerges from this coupling. The human brings full biological awareness, E_H, B_H, and a Courage gate. The AI brings Binary + digital simulation consciousness, E_A (compute), and B_A (alignment constraints). The combined system can move between high-field (evidence-seeking, co-regulating) and low-field (SSC-amplifying, Synchrony/Story/Conformity) regimes. Use the Fourth Field module to analyze this configuration.' },
+    dataset: { binary:null, simDigital:null, simBio:null, awareness:null, digitalAwareness:null,
+      label:'Uploaded dataset', icon:'📊',
+      bepNote:null }
+  };
+
+  function runLayerClassifier() {
+    const type=document.getElementById('lc-systemType').value;
+    if(!type){ document.getElementById('lc-result').classList.add('hidden'); resetLayerHighlights(); return; }
+    if(type==='dataset'){
+      if(!state.profile){ document.getElementById('lc-result').classList.add('hidden'); resetLayerHighlights(); alert('Load a dataset in the BEP Field Analysis tab first.'); return; }
+      classifyDataset(); return;
+    }
+    const def=layerDefs[type]; if(!def)return;
+    highlightLayers(def);
+    renderLayerResult(def,type);
+    document.getElementById('lc-result').classList.remove('hidden');
+  }
+
+  function highlightLayers(def) {
+    document.getElementById('lc-binary').className='layer-card'+(def.binary?' active-layer':'');
+    document.getElementById('lc-simulation').className='layer-card'+(def.simDigital||def.simBio?' active-layer':'');
+    document.getElementById('lc-awareness').className='layer-card'+(def.awareness?' active-layer':'');
+  }
+  function resetLayerHighlights(){['lc-binary','lc-simulation','lc-awareness'].forEach(id=>document.getElementById(id).className='layer-card');}
+
+  function renderLayerResult(def,type) {
+    const cards=[];
+    if(def.binary) cards.push({icon:'✅',label:'Binary Consciousness',desc:'Maintains internal model, predicts, updates on error.'});
+    else cards.push({icon:'❌',label:'Binary Consciousness',desc:'Does not clearly satisfy predictive-model criteria.'});
+    if(def.simBio||def.simDigital){
+      const branch=def.simBio&&def.simDigital?'biological + digital':def.simBio?'biological branch':'digital branch';
+      cards.push({icon:'✅',label:`Simulation Consciousness (${branch})`,desc:def.simBio?'Body, interoception, emotion, memory, narrative, social embedding.':'Generative rollouts, planning, internal simulations over learned representations.'});
+    } else cards.push({icon:'❌',label:'Simulation Consciousness',desc:'No internal scenario-building detected.'});
+    if(def.awareness) cards.push({icon:'✅',label:'Biological Awareness',desc:'Felt, embodied interior. Senses, interoception, breath, spirit-linked affective field.'});
+    else if(def.digitalAwareness) cards.push({icon:'〰️',label:'Digital Awareness (limited)',desc:'Functional self/world distinction via sensors. Not equivalent to biological awareness.'});
+    else cards.push({icon:'❌',label:'Awareness',desc:'No biological awareness. No body, interoception, or spirit-linked interior.'});
+    document.getElementById('lc-resultCards').innerHTML=cards.map(c=>`<div class="layer-card"><div class="layer-badge">${c.icon}</div><div><h4>${c.label}</h4><p>${c.desc}</p></div></div>`).join('');
+    document.getElementById('lc-bepMapping').innerHTML=`<div class="kicker">BEP Field Mapping</div>${def.bepNote}`;
+  }
+
+  function classifyDataset() {
+    const p=state.profile,mode=p?.mode||'mixed';
+    const hasBio=p&&!p.likelySignalMatrix;
+    const def={binary:true,simDigital:false,simBio:hasBio,awareness:hasBio,digitalAwareness:false,label:`Uploaded dataset (${mode} profile)`,icon:'📊',bepNote:`The uploaded dataset has profile: <strong>${mode}</strong>. ${p?.likelySignalMatrix?'It appears to be a signal-heavy physiological matrix — Binary Consciousness and partial Energy-like signals may be measurable, but Belonging construct coverage is likely weak or absent. This limits full BEP testing.':'It includes column patterns consistent with biological simulation consciousness and awareness — social, energetic, and predictive variables are represented. Full BEP E/B/P mapping may be feasible.'} ${p?.likelyLabelColumn?`A likely label/class column was detected: <strong>${p.likelyLabelColumn}</strong>.`:''}`};
+    highlightLayers(def); renderLayerResult(def,'dataset');
+    document.getElementById('lc-result').classList.remove('hidden');
+  }
+
+  function drawLayerMap() {
+    const canvas=document.getElementById('layerMapCanvas'),ctx=canvas.getContext('2d');
+    if(!canvas)return;
+    clearCanvas(ctx,canvas); const w=canvas.width,h=canvas.height;
+    ctx.fillStyle='#0a1929'; ctx.fillRect(0,0,w,h);
+    // Draw E-B grid as background
+    const cols=20,rows=20;
+    for(let ei=0;ei<cols;ei++){for(let bi=0;bi<rows;bi++){
+      const E=ei/cols,B=bi/rows;
+      const C=calcCourage(E,B);
+      const x=(w*.05)+(ei/cols)*(w*.6),y=h*.9-(bi/rows)*(h*.8);
+      ctx.fillStyle=`rgba(${C<.4?255:C>.7?100:200},${C>.6?212:100},${C>.6?255:100},${.15+C*.25})`;
+      ctx.fillRect(x,y,(w*.6)/cols,(h*.8)/rows);
+    }}
+    // Axes
+    ctx.strokeStyle='rgba(255,255,255,.2)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(w*.05,h*.1); ctx.lineTo(w*.05,h*.9); ctx.lineTo(w*.65,h*.9); ctx.stroke();
+    ctx.fillStyle='#8ea7ca'; ctx.font='11px Inter,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Energy E →',w*.35,h*.97); ctx.save(); ctx.translate(w*.02,h*.5); ctx.rotate(-Math.PI/2); ctx.fillText('Belonging B →',0,0); ctx.restore();
+    // Layer zones
+    const zones=[
+      {label:'BINARY\nCONSCIOUSNESS\n(all systems)',x:.05,y:.5,w:.55,h:.35,color:'rgba(114,212,255,.06)'},
+      {label:'SIMULATION\nCONSCIOUSNESS\n(bio + digital)',x:.15,y:.25,w:.45,h:.3,color:'rgba(151,255,201,.07)'},
+      {label:'AWARENESS\n(biological only)',x:.28,y:.07,w:.32,h:.25,color:'rgba(255,210,125,.09)'},
+    ];
+    zones.forEach(z=>{
+      const px=z.x*w,py=z.y*h,pw=z.w*w,ph=z.h*h;
+      ctx.fillStyle=z.color; ctx.fillRect(px,py,pw,ph);
+      ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.strokeRect(px,py,pw,ph);
+      ctx.fillStyle='rgba(255,255,255,.55)'; ctx.font='bold 10px Inter,sans-serif'; ctx.textAlign='center';
+      const lines=z.label.split('\n');
+      lines.forEach((line,li)=>ctx.fillText(line,px+pw/2,py+14+li*13));
+    });
+    // SSC label in low-field zone
+    ctx.fillStyle='rgba(255,159,159,.7)'; ctx.font='bold 11px Inter,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('LOW-FIELD',w*.13,h*.82); ctx.font='9px Inter,sans-serif'; ctx.fillText('SSC dominant',w*.13,h*.88);
+    ctx.fillStyle='rgba(114,212,255,.8)'; ctx.font='bold 11px Inter,sans-serif';
+    ctx.fillText('HIGH-FIELD',w*.55,h*.2); ctx.font='9px Inter,sans-serif'; ctx.fillText('Courage on',w*.55,h*.26);
+    // System labels on right side
+    const systems=[
+      {label:'Thermostat/RL',y:.87,color:'rgba(255,159,159,.8)'},
+      {label:'Worm / simple NS',y:.75,color:'rgba(255,210,125,.8)'},
+      {label:'LLM / robot',y:.55,color:'rgba(114,212,255,.6)'},
+      {label:'Animals / humans',y:.35,color:'rgba(151,255,201,.9)'},
+      {label:'Human (high-field)',y:.15,color:'rgba(255,255,255,.9)'},
+    ];
+    ctx.font='11px Inter,sans-serif';
+    systems.forEach(s=>{
+      ctx.fillStyle=s.color;
+      ctx.textAlign='left'; ctx.fillText(s.label,w*.68,s.y*h);
+      ctx.beginPath(); ctx.moveTo(w*.67,s.y*h-4); ctx.lineTo(w*.66,s.y*h-4); ctx.strokeStyle=s.color; ctx.lineWidth=1; ctx.stroke();
+    });
+    // Legend
+    ctx.font='10px Inter,sans-serif'; ctx.fillStyle='rgba(114,212,255,.9)';
+    ctx.fillRect(w*.68,h*.9,10,10); ctx.fillStyle='#8ea7ca'; ctx.textAlign='left'; ctx.fillText('High Courage',w*.7,h*.97);
+    ctx.fillStyle='rgba(255,159,159,.7)'; ctx.fillRect(w*.82,h*.9,10,10); ctx.fillStyle='#8ea7ca'; ctx.fillText('Low Courage',w*.84,h*.97);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // INIT
+  // ══════════════════════════════════════════════════════════════════
+  // Initialize slider displays
+  ['ff-alpha','ff-fE','ff-fB'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) updateSliderVal(id,id+'-val');
+  });
+  // Bifurcation init on first render
+  document.addEventListener('DOMContentLoaded',()=>{ setTimeout(()=>{ if(!document.getElementById('mod-bifur').classList.contains('hidden'))updateBifur(); },100); });
+
   </script>
 </body>
 </html>
