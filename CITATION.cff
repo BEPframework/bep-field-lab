@@ -1,37 +1,64 @@
 cff-version: 1.2.0
-title: "BEP Field Lab v3"
+title: "BEP Field Lab v4"
 message: "If you use this software, please cite it using the metadata below."
 type: software
-
 authors:
   - family-names: "Quiroz"
     given-names: "Nicolas Brian"
     orcid: "https://orcid.org/0009-0003-8887-5429"
-
 identifiers:
   - type: url
     value: "https://github.com/bepframework/bep-field-lab"
-
 repository-code: "https://github.com/bepframework/bep-field-lab"
-
 abstract: >
   BEP Field Lab is an interactive research tool for exploring the
   Belonging–Energy–Prediction (BEP) framework using uploaded datasets.
-  The application allows researchers to map proxy variables, compute
-  composite field scores, visualize field dynamics, and compare BEP
-  composite performance against single-variable baselines.
-
+  Version 4 includes four modules: (1) BEP Field Analysis — map proxy variables,
+  compute composite field scores, and compare BEP composite performance against
+  single-variable baselines; (2) Fourth Field — human–AI dyadic model implementing
+  the BEP Field Theory of Conscious Systems, with Errfield, Polfield, Courage
+  trajectory, and regime classification; (3) Bifurcation Explorer — interactive
+  visualization of field-dependent phase transitions between story-dominated and
+  evidence-dominated attractors, based on the gradient-flow analysis in Appendix C
+  of the BEP Field Theory of Conscious Systems; (4) Consciousness Layer Classifier —
+  maps systems to the three BEP layers (Binary Consciousness, Simulation
+  Consciousness, Awareness) with field-layer interaction visualization.
+  The application runs entirely in the browser with no server or installation required.
 keywords:
   - BEP framework
+  - Belonging Energy Prediction
+  - field theory
+  - consciousness
+  - Fourth Field
+  - human-AI interaction
   - cognition
-  - field dynamics
+  - bifurcation
   - exploratory data analysis
   - behavioral science
   - computational research tool
-
+  - decision making
+  - SSC dynamics
+  - epistemic courage
 license: MIT
-
-version: "3"
-date-released: 2026-03-15
-
+version: "4"
+date-released: 2026-03-16
 url: "https://github.com/bepframework/bep-field-lab"
+references:
+  - type: article
+    authors:
+      - family-names: "Quiroz"
+        given-names: "Nicolas Brian"
+        orcid: "https://orcid.org/0009-0003-8431-0048"
+    title: "The BEP Principle: Belonging, Energy, and Prediction as core drivers of human cognition and decision"
+    year: 2025
+    url: "https://doi.org/10.5281/zenodo.17717883"
+    repository: "Zenodo"
+  - type: article
+    authors:
+      - family-names: "Quiroz"
+        given-names: "Nicolas Brian"
+        orcid: "https://orcid.org/0009-0003-8431-0048"
+    title: "The BEP Field Theory of Decision: A fractal model of Energy, Belonging, and predictive coherence"
+    year: 2025
+    url: "https://doi.org/10.5281/zenodo.17759583"
+    repository: "Zenodo"
