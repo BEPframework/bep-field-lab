@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-BEP Field Lab v2.1
+BEP Field Lab v3
 Copyright (c) 2026 Nicolas Brian Quiroz, MD
 
 Author: Nicolas B. Quiroz, MD
@@ -12,7 +12,7 @@ Licensed under the MIT License.
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BEP Field Lab v2.1</title>
+  <title>BEP Field Lab v3</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
@@ -127,7 +127,7 @@ Licensed under the MIT License.
 <body>
   <div class="shell">
     <section class="hero">
-      <div class="tagline">BEP Field Lab v2.1</div>
+      <div class="tagline">BEP Field Lab v3</div>
       <h1>Research-grade BEP exploration for uploaded data.</h1>
       <p>
         Upload CSV or Excel files, control header parsing, auto-name columns when headers are missing,
@@ -154,8 +154,8 @@ Licensed under the MIT License.
         <div class="panel-body stack">
           <div id="dropzone" class="dropzone">
             <strong>Upload dataset</strong>
-            <p>Drop a CSV or Excel file here, or choose one manually. Excel support uses the SheetJS CDN script included in this file.</p>
-            <input id="fileInput" type="file" accept=".csv,.xlsx,.xls" class="hidden" />
+            <p>Drop a CSV, TSV, TXT, JSON, or Excel file here, or choose one manually. Excel support uses the SheetJS CDN script included in this file.</p>
+            <input id="fileInput" type="file" accept=".csv,.tsv,.txt,.json,.xlsx,.xls" class="hidden" />
             <button class="btn btn-primary" id="chooseFileBtn">Choose file</button>
           </div>
 
@@ -246,7 +246,7 @@ Licensed under the MIT License.
             </div>
 
             <div class="grid-2">
-              <button id="analyzeBtn" class="btn btn-primary">Run BEP v2.1 analysis</button>
+              <button id="analyzeBtn" class="btn btn-primary">Run BEP v3 analysis</button>
               <button id="exportBtn" class="btn btn-secondary">Export report</button>
             </div>
             <div class="grid-2">
@@ -300,480 +300,1348 @@ Licensed under the MIT License.
   </div>
 
   <script>
-    const state = { rawRows: [], numericColumns: [], allColumns: [], fileName: null, analysis: null, lastFile: null, profile: null };
+  const state = {
+    rawRows: [],
+    numericColumns: [],
+    allColumns: [],
+    fileName: null,
+    analysis: null,
+    lastFile: null,
+    profile: null
+  };
 
-    const fileInput = document.getElementById('fileInput');
-    const chooseFileBtn = document.getElementById('chooseFileBtn');
-    const dropzone = document.getElementById('dropzone');
-    const statusBox = document.getElementById('statusBox');
-    const datasetProfileBox = document.getElementById('datasetProfileBox');
-    const datasetMeta = document.getElementById('datasetMeta');
-    const mappingSection = document.getElementById('mappingSection');
-    const previewWrap = document.getElementById('previewWrap');
-    const tablePlaceholder = document.getElementById('tablePlaceholder');
-    const resultsSection = document.getElementById('resultsSection');
-    const headerMode = document.getElementById('headerMode');
-    const datasetMode = document.getElementById('datasetMode');
+  const fileInput = document.getElementById('fileInput');
+  const chooseFileBtn = document.getElementById('chooseFileBtn');
+  const dropzone = document.getElementById('dropzone');
+  const statusBox = document.getElementById('statusBox');
+  const datasetProfileBox = document.getElementById('datasetProfileBox');
+  const datasetMeta = document.getElementById('datasetMeta');
+  const mappingSection = document.getElementById('mappingSection');
+  const previewWrap = document.getElementById('previewWrap');
+  const tablePlaceholder = document.getElementById('tablePlaceholder');
+  const resultsSection = document.getElementById('resultsSection');
+  const headerMode = document.getElementById('headerMode');
+  const datasetMode = document.getElementById('datasetMode');
 
-    chooseFileBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', e => { const file = e.target.files[0]; if (file) handleFile(file); });
-    headerMode.addEventListener('change', () => { if (state.lastFile) handleFile(state.lastFile); });
-    datasetMode.addEventListener('change', () => { if (state.rawRows.length) { setupSelectors(); renderDatasetProfile(); } });
+  chooseFileBtn.addEventListener('click', () => fileInput.click());
 
-    ['dragenter', 'dragover'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('dragover'); }));
-    ['dragleave', 'drop'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('dragover'); }));
-    dropzone.addEventListener('drop', e => { const file = e.dataTransfer.files[0]; if (file) handleFile(file); });
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleFile(file);
+  });
 
-    document.getElementById('analyzeBtn').addEventListener('click', runAnalysis);
-    document.getElementById('exportBtn').addEventListener('click', exportReport);
-    document.getElementById('loadStrongSampleBtn').addEventListener('click', () => loadSampleDataset('strong'));
-    document.getElementById('loadNullSampleBtn').addEventListener('click', () => loadSampleDataset('null'));
-    document.querySelectorAll('[data-download-canvas]').forEach(btn => {
-      btn.addEventListener('click', () => downloadCanvas(btn.dataset.downloadCanvas, btn.dataset.downloadName || 'chart'));
+  headerMode.addEventListener('change', () => {
+    if (state.lastFile) handleFile(state.lastFile);
+  });
+
+  datasetMode.addEventListener('change', () => {
+    if (state.rawRows.length) {
+      setupSelectors();
+      renderDatasetProfile();
+    }
+  });
+
+  ['dragenter', 'dragover'].forEach((evt) => {
+    dropzone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.add('dragover');
     });
+  });
 
-    function setStatus(message, tone = 'default') {
-      statusBox.className = 'status';
-      if (tone === 'good') statusBox.classList.add('good');
-      if (tone === 'warn') statusBox.classList.add('warn');
-      if (tone === 'bad') statusBox.classList.add('bad');
-      statusBox.textContent = message;
+  ['dragleave', 'drop'].forEach((evt) => {
+    dropzone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('dragover');
+    });
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  document.getElementById('analyzeBtn').addEventListener('click', runAnalysis);
+  document.getElementById('exportBtn').addEventListener('click', exportReport);
+  document.getElementById('loadStrongSampleBtn').addEventListener('click', () => loadSampleDataset('strong'));
+  document.getElementById('loadNullSampleBtn').addEventListener('click', () => loadSampleDataset('null'));
+
+  document.querySelectorAll('[data-download-canvas]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      downloadCanvas(btn.dataset.downloadCanvas, btn.dataset.downloadName || 'chart');
+    });
+  });
+
+  function setStatus(message, tone = 'default') {
+    statusBox.className = 'status';
+    if (tone === 'good') statusBox.classList.add('good');
+    if (tone === 'warn') statusBox.classList.add('warn');
+    if (tone === 'bad') statusBox.classList.add('bad');
+    statusBox.textContent = message;
+  }
+
+  function handleFile(file) {
+    state.fileName = file.name;
+    state.lastFile = file;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    setStatus(`Reading ${file.name}...`, 'warn');
+
+    if (ext === 'csv') {
+      const reader = new FileReader();
+      reader.onload = (e) => ingestRows(parseDelimitedSmart(e.target.result, 'csv'), file.name);
+      reader.readAsText(file);
+      return;
     }
 
-    function handleFile(file) {
-      state.fileName = file.name;
-      state.lastFile = file;
-      const ext = file.name.split('.').pop().toLowerCase();
-      setStatus(`Reading ${file.name}...`, 'warn');
-      if (ext === 'csv') {
-        const reader = new FileReader();
-        reader.onload = e => ingestRows(parseCSVSmart(e.target.result), file.name);
-        reader.readAsText(file);
-      } else if (ext === 'xlsx' || ext === 'xls') {
-        const reader = new FileReader();
-        reader.onload = e => {
-          try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            ingestRows(parseExcelSmart(worksheet), file.name);
-          } catch (err) {
-            console.error(err);
-            setStatus('Could not parse that Excel file. Try saving as CSV or checking the sheet format.', 'bad');
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      } else {
-        setStatus('Unsupported file type. Please upload a CSV, XLSX, or XLS file.', 'bad');
-      }
+    if (ext === 'tsv' || ext === 'tab' || ext === 'txt') {
+      const reader = new FileReader();
+      reader.onload = (e) => ingestRows(parseDelimitedSmart(e.target.result, ext), file.name);
+      reader.readAsText(file);
+      return;
     }
 
-    function loadSampleDataset(type) {
-      const rows = type === 'strong' ? createStrongBEPDataset() : createNullBEPDataset();
-      state.fileName = type === 'strong' ? 'sample_strong_bep.csv' : 'sample_null_inverted_bep.csv';
-      state.lastFile = null;
-      headerMode.value = 'yes';
-      datasetMode.value = 'mixed';
-      ingestRows(rows, state.fileName);
-      document.getElementById('notesBox').value = type === 'strong'
+    if (ext === 'json') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          ingestRows(parseJSONSmart(e.target.result), file.name);
+        } catch (err) {
+          console.error(err);
+          setStatus('Could not parse that JSON file. Use an array of objects or an array of arrays.', 'bad');
+        }
+      };
+      reader.readAsText(file);
+      return;
+    }
+
+    if (ext === 'xlsx' || ext === 'xls') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          ingestRows(parseExcelSmart(worksheet), file.name);
+        } catch (err) {
+          console.error(err);
+          setStatus('Could not parse that Excel file. Try saving as CSV or checking the sheet format.', 'bad');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+
+    if (ext === 'dta') {
+      setStatus('Stata .dta support is not implemented in this browser-only build yet. Convert to CSV/XLSX first or use a future backend parser.', 'bad');
+      return;
+    }
+
+    if (ext === 'sav') {
+      setStatus('SPSS .sav support is not implemented in this browser-only build yet. Convert to CSV/XLSX first or use a future backend parser.', 'bad');
+      return;
+    }
+
+    if (ext === 'parquet') {
+      setStatus('Parquet support is not implemented in this browser-only build yet. Convert to CSV/JSON first or use a future backend parser.', 'bad');
+      return;
+    }
+
+    if (ext === 'pdf') {
+      setStatus('PDF is a document format, not a native tabular research dataset. Extract tables to CSV/XLSX before analysis.', 'bad');
+      return;
+    }
+
+    if (ext === 'epub') {
+      setStatus('EPUB is a document format, not a native tabular research dataset. Extract structured tables before analysis.', 'bad');
+      return;
+    }
+
+    if (ext === 'do') {
+      setStatus('Stata .do files are scripts, not datasets. Upload the resulting data table instead.', 'bad');
+      return;
+    }
+
+    setStatus('Unsupported file type. Use CSV, TSV, TXT, JSON, XLSX, or XLS in this build.', 'bad');
+  }
+
+  function loadSampleDataset(type) {
+    const rows = type === 'strong' ? createStrongBEPDataset() : createNullBEPDataset();
+    state.fileName = type === 'strong' ? 'sample_strong_bep.csv' : 'sample_null_inverted_bep.csv';
+    state.lastFile = null;
+    headerMode.value = 'yes';
+    datasetMode.value = 'mixed';
+
+    ingestRows(rows, state.fileName);
+
+    document.getElementById('notesBox').value =
+      type === 'strong'
         ? 'Built-in strong BEP sample dataset with aligned Energy, Belonging, and Prediction structure.'
         : 'Built-in null / inverted sample dataset designed to show weak or contradictory BEP alignment.';
-      setStatus(`Loaded ${state.fileName} sample data.`, 'good');
+
+    setStatus(`Loaded ${state.fileName} sample data.`, 'good');
+  }
+
+  function createStrongBEPDataset() {
+    const rows = [];
+
+    for (let i = 0; i < 180; i++) {
+      const energyBase = (i % 60) / 59;
+      const belongingBase = ((i * 7) % 60) / 59;
+      const stress = clamp01(1 - energyBase + ((i % 9) - 4) * 0.015);
+      const fatigue = clamp01(1 - energyBase + ((i % 11) - 5) * 0.012);
+      const support = clamp01(belongingBase + ((i % 13) - 6) * 0.01);
+      const cohesion = clamp01(belongingBase + ((i % 7) - 3) * 0.014);
+      const field = clamp01((energyBase + belongingBase) / 2);
+      const performance = clamp01(field + ((i % 5) - 2) * 0.025);
+      const adaptation = clamp01(field + ((i % 8) - 4) * 0.02);
+
+      rows.push({
+        participant_id: `S_${i + 1}`,
+        session_order: i + 1,
+        hrv_score: Number(energyBase.toFixed(4)),
+        sleep_quality: Number((energyBase * 0.9 + 0.05).toFixed(4)),
+        stress_load: Number(stress.toFixed(4)),
+        fatigue_inverse: Number((1 - fatigue).toFixed(4)),
+        social_support: Number(support.toFixed(4)),
+        team_cohesion: Number(cohesion.toFixed(4)),
+        belonging_index: Number(((support + cohesion) / 2).toFixed(4)),
+        decision_accuracy: Number(performance.toFixed(4)),
+        adaptation_score: Number(adaptation.toFixed(4)),
+        outcome_score: Number(((performance + adaptation) / 2).toFixed(4)),
+        cohort: i < 90 ? 'A' : 'B'
+      });
     }
 
-    function createStrongBEPDataset() {
-      const rows = [];
-      for (let i = 0; i < 180; i++) {
-        const energyBase = (i % 60) / 59;
-        const belongingBase = ((i * 7) % 60) / 59;
-        const stress = clamp01(1 - energyBase + ((i % 9) - 4) * 0.015);
-        const fatigue = clamp01(1 - energyBase + ((i % 11) - 5) * 0.012);
-        const support = clamp01(belongingBase + ((i % 13) - 6) * 0.01);
-        const cohesion = clamp01(belongingBase + ((i % 7) - 3) * 0.014);
-        const field = clamp01((energyBase + belongingBase) / 2);
-        const performance = clamp01(field + ((i % 5) - 2) * 0.025);
-        const adaptation = clamp01(field + ((i % 8) - 4) * 0.02);
-        rows.push({
-          participant_id: `S_${i + 1}`,
-          session_order: i + 1,
-          hrv_score: Number(energyBase.toFixed(4)),
-          sleep_quality: Number((energyBase * 0.9 + 0.05).toFixed(4)),
-          stress_load: Number(stress.toFixed(4)),
-          fatigue_inverse: Number((1 - fatigue).toFixed(4)),
-          social_support: Number(support.toFixed(4)),
-          team_cohesion: Number(cohesion.toFixed(4)),
-          belonging_index: Number(((support + cohesion) / 2).toFixed(4)),
-          decision_accuracy: Number(performance.toFixed(4)),
-          adaptation_score: Number(adaptation.toFixed(4)),
-          outcome_score: Number(((performance + adaptation) / 2).toFixed(4)),
-          cohort: i < 90 ? 'A' : 'B'
-        });
-      }
-      return rows;
+    return rows;
+  }
+
+  function createNullBEPDataset() {
+    const rows = [];
+
+    for (let i = 0; i < 180; i++) {
+      const energyBase = (i % 60) / 59;
+      const belongingBase = ((i * 5) % 60) / 59;
+      const randomish = ((i * 17) % 37) / 36;
+      const performance = clamp01(1 - ((energyBase + belongingBase) / 2) + ((i % 5) - 2) * 0.03);
+      const adaptation = clamp01(randomish + ((i % 9) - 4) * 0.02);
+
+      rows.push({
+        participant_id: `N_${i + 1}`,
+        session_order: i + 1,
+        hrv_score: Number(energyBase.toFixed(4)),
+        sleep_quality: Number((energyBase * 0.85 + 0.07).toFixed(4)),
+        stress_load: Number((1 - energyBase).toFixed(4)),
+        fatigue_inverse: Number((energyBase * 0.8 + 0.1).toFixed(4)),
+        social_support: Number(belongingBase.toFixed(4)),
+        team_cohesion: Number((belongingBase * 0.88 + 0.05).toFixed(4)),
+        belonging_index: Number((belongingBase * 0.9 + 0.03).toFixed(4)),
+        decision_accuracy: Number(performance.toFixed(4)),
+        adaptation_score: Number(adaptation.toFixed(4)),
+        outcome_score: Number(((performance + adaptation) / 2).toFixed(4)),
+        cohort: i < 90 ? 'A' : 'B'
+      });
     }
 
-    function createNullBEPDataset() {
-      const rows = [];
-      for (let i = 0; i < 180; i++) {
-        const energyBase = (i % 60) / 59;
-        const belongingBase = ((i * 5) % 60) / 59;
-        const randomish = ((i * 17) % 37) / 36;
-        const performance = clamp01(1 - ((energyBase + belongingBase) / 2) + ((i % 5) - 2) * 0.03);
-        const adaptation = clamp01(randomish + ((i % 9) - 4) * 0.02);
-        rows.push({
-          participant_id: `N_${i + 1}`,
-          session_order: i + 1,
-          hrv_score: Number(energyBase.toFixed(4)),
-          sleep_quality: Number((energyBase * 0.85 + 0.07).toFixed(4)),
-          stress_load: Number((1 - energyBase).toFixed(4)),
-          fatigue_inverse: Number((energyBase * 0.8 + 0.1).toFixed(4)),
-          social_support: Number(belongingBase.toFixed(4)),
-          team_cohesion: Number((belongingBase * 0.88 + 0.05).toFixed(4)),
-          belonging_index: Number((belongingBase * 0.9 + 0.03).toFixed(4)),
-          decision_accuracy: Number(performance.toFixed(4)),
-          adaptation_score: Number(adaptation.toFixed(4)),
-          outcome_score: Number(((performance + adaptation) / 2).toFixed(4)),
-          cohort: i < 90 ? 'A' : 'B'
-        });
-      }
-      return rows;
+    return rows;
+  }
+
+  function downloadCanvas(canvasId, fileName) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+      setStatus('Chart not found for download.', 'bad');
+      return;
     }
 
-    function downloadCanvas(canvasId, fileName) {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) {
-        setStatus('Chart not found for download.', 'bad');
-        return;
-      }
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = `${fileName || canvasId}.png`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setStatus(`Downloaded ${fileName || canvasId}.png`, 'good');
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = `${fileName || canvasId}.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setStatus(`Downloaded ${fileName || canvasId}.png`, 'good');
+  }
+
+  function parseDelimitedSmart(text, extHint = 'csv') {
+    const lines = text.replace(/\r/g, '').split('\n').filter((line) => line.trim().length);
+    if (!lines.length) return [];
+
+    const delimiter = inferDelimiter(lines, extHint);
+    const parsed = lines.map((line) => splitDelimitedLine(line, delimiter));
+
+    const mode = headerMode.value;
+    const hasHeader = mode === 'yes' ? true : mode === 'no' ? false : detectHeader(parsed);
+
+    return rowsFromParsed(parsed, hasHeader);
+  }
+
+  function parseCSVSmart(text) {
+    return parseDelimitedSmart(text, 'csv');
+  }
+
+  function parseJSONSmart(text) {
+    const parsed = JSON.parse(text);
+
+    if (!Array.isArray(parsed) || !parsed.length) {
+      throw new Error('JSON root must be a non-empty array.');
     }
 
-    function parseCSVSmart(text) {
-      const lines = text.replace(/\r/g, '').split('\n').filter(line => line.trim().length);
-      if (!lines.length) return [];
-      const parsed = lines.map(splitCSVLine);
+    if (typeof parsed[0] === 'object' && !Array.isArray(parsed[0]) && parsed[0] !== null) {
+      return parsed.map((row) => ({ ...row }));
+    }
+
+    if (Array.isArray(parsed[0])) {
       const mode = headerMode.value;
       const hasHeader = mode === 'yes' ? true : mode === 'no' ? false : detectHeader(parsed);
       return rowsFromParsed(parsed, hasHeader);
     }
 
-    function parseExcelSmart(worksheet) {
-      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-      if (!rows.length) return [];
-      const mode = headerMode.value;
-      const hasHeader = mode === 'yes' ? true : mode === 'no' ? false : detectHeader(rows);
-      return rowsFromParsed(rows, hasHeader);
+    throw new Error('Unsupported JSON shape.');
+  }
+
+  function parseExcelSmart(worksheet) {
+    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+    if (!rows.length) return [];
+
+    const mode = headerMode.value;
+    const hasHeader = mode === 'yes' ? true : mode === 'no' ? false : detectHeader(rows);
+
+    return rowsFromParsed(rows, hasHeader);
+  }
+
+  function inferDelimiter(lines, extHint) {
+    if (extHint === 'tsv' || extHint === 'tab') return '\t';
+
+    if (extHint === 'txt') {
+      const sample = lines.slice(0, 5).join('\n');
+      const tabCount = (sample.match(/\t/g) || []).length;
+      const commaCount = (sample.match(/,/g) || []).length;
+      const pipeCount = (sample.match(/\|/g) || []).length;
+
+      if (tabCount >= commaCount && tabCount >= pipeCount && tabCount > 0) return '\t';
+      if (pipeCount > commaCount && pipeCount > 0) return '|';
     }
 
-    function rowsFromParsed(parsedRows, hasHeader) {
-      if (!parsedRows.length) return [];
-      const width = Math.max(...parsedRows.map(r => r.length));
-      const normalized = parsedRows.map(r => { const copy = [...r]; while (copy.length < width) copy.push(''); return copy; });
-      const headers = hasHeader ? normalized[0].map((h, i) => cleanHeaderName(h, i)) : Array.from({ length: width }, (_, i) => `col_${i + 1}`);
-      const start = hasHeader ? 1 : 0;
-      const out = [];
-      for (let i = start; i < normalized.length; i++) {
-        const obj = {};
-        headers.forEach((h, idx) => { obj[h] = normalized[i][idx] ?? ''; });
-        out.push(obj);
+    return ',';
+  }
+
+  function splitDelimitedLine(line, delimiter) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const next = line[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && next === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
       }
-      return out;
     }
 
-    function cleanHeaderName(value, index) {
-      const raw = String(value ?? '').trim();
-      return raw || `col_${index + 1}`;
+    result.push(current);
+    return result;
+  }
+
+  function rowsFromParsed(parsedRows, hasHeader) {
+    if (!parsedRows.length) return [];
+
+    const width = Math.max(...parsedRows.map((r) => r.length));
+    const normalized = parsedRows.map((r) => {
+      const copy = [...r];
+      while (copy.length < width) copy.push('');
+      return copy;
+    });
+
+    const headers = hasHeader
+      ? normalized[0].map((h, i) => cleanHeaderName(h, i))
+      : Array.from({ length: width }, (_, i) => `col_${i + 1}`);
+
+    const start = hasHeader ? 1 : 0;
+    const out = [];
+
+    for (let i = start; i < normalized.length; i++) {
+      const obj = {};
+      headers.forEach((h, idx) => {
+        obj[h] = normalized[i][idx] ?? '';
+      });
+      out.push(obj);
     }
 
-    function detectHeader(parsedRows) {
-      if (parsedRows.length < 2) return true;
-      const first = parsedRows[0] || [];
-      const second = parsedRows[1] || [];
-      const width = Math.max(first.length, second.length, 1);
-      let textishFirst = 0, numericFirst = 0, numericSecond = 0;
-      for (let i = 0; i < width; i++) {
-        const a = first[i] ?? '';
-        const b = second[i] ?? '';
-        const aNum = cleanNumber(a), bNum = cleanNumber(b);
-        const aIsNum = Number.isFinite(aNum), bIsNum = Number.isFinite(bNum);
-        if (aIsNum) numericFirst++; else if (String(a).trim()) textishFirst++;
-        if (bIsNum) numericSecond++;
+    return out;
+  }
+
+  function cleanHeaderName(value, index) {
+    const raw = String(value ?? '').trim();
+    return raw || `col_${index + 1}`;
+  }
+
+  function detectHeader(parsedRows) {
+    if (parsedRows.length < 2) return true;
+
+    const first = parsedRows[0] || [];
+    const second = parsedRows[1] || [];
+    const width = Math.max(first.length, second.length, 1);
+
+    let textishFirst = 0;
+    let numericFirst = 0;
+    let numericSecond = 0;
+
+    for (let i = 0; i < width; i++) {
+      const a = first[i] ?? '';
+      const b = second[i] ?? '';
+      const aNum = cleanNumber(a);
+      const bNum = cleanNumber(b);
+      const aIsNum = Number.isFinite(aNum);
+      const bIsNum = Number.isFinite(bNum);
+
+      if (aIsNum) numericFirst++;
+      else if (String(a).trim()) textishFirst++;
+
+      if (bIsNum) numericSecond++;
+    }
+
+    if (numericFirst === width && numericSecond >= Math.max(1, Math.floor(width * 0.7))) {
+      return false;
+    }
+
+    if (textishFirst >= Math.ceil(width * 0.4) && numericSecond >= Math.floor(width * 0.4)) {
+      return true;
+    }
+
+    return textishFirst > numericFirst;
+  }
+
+  function ingestRows(rows, fileName) {
+    if (!rows || !rows.length) {
+      setStatus('No rows detected in the uploaded file.', 'bad');
+      return;
+    }
+
+    state.rawRows = rows.map((r) => ({ ...r }));
+    state.allColumns = Object.keys(rows[0]);
+    state.numericColumns = detectNumericColumns(rows);
+    state.profile = detectDatasetProfile(rows, state.numericColumns);
+
+    if (state.numericColumns.length < 3) {
+      setStatus('The file loaded, but fewer than three numeric columns were detected. At least three numeric columns are needed for BEP exploration.', 'bad');
+    } else {
+      setStatus(`Loaded ${fileName} successfully. Detected ${rows.length} rows and ${state.numericColumns.length} numeric columns.`, 'good');
+    }
+
+    renderDatasetMeta(rows);
+    renderPreview(rows);
+    setupSelectors();
+    renderDatasetProfile();
+    mappingSection.classList.remove('hidden');
+    resultsSection.classList.add('hidden');
+    state.analysis = null;
+  }
+
+  function detectNumericColumns(rows) {
+    const cols = Object.keys(rows[0] || {});
+    return cols.filter((col) => {
+      const validCount = rows
+        .map((r) => cleanNumber(r[col]))
+        .filter((v) => Number.isFinite(v)).length;
+
+      return validCount >= Math.max(4, rows.length * 0.4);
+    });
+  }
+
+  function cleanNumber(value) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+    if (value === null || value === undefined) return NaN;
+
+    const cleaned = String(value).trim().replace(/[%,$]/g, '');
+    const num = parseFloat(cleaned);
+
+    return Number.isFinite(num) ? num : NaN;
+  }
+
+  function renderDatasetMeta(rows) {
+    const missing = countMissing(rows);
+
+    datasetMeta.innerHTML = `
+      <div class="meta-item"><div class="label">Rows</div><div class="value">${rows.length}</div></div>
+      <div class="meta-item"><div class="label">Columns</div><div class="value">${state.allColumns.length}</div></div>
+      <div class="meta-item"><div class="label">Numeric Columns</div><div class="value">${state.numericColumns.length}</div></div>
+      <div class="meta-item"><div class="label">Missing Cells</div><div class="value">${missing}</div></div>
+    `;
+
+    datasetMeta.classList.remove('hidden');
+  }
+
+  function countMissing(rows) {
+    let count = 0;
+
+    rows.forEach((row) => {
+      Object.values(row).forEach((v) => {
+        if (v === '' || v === null || v === undefined) count++;
+      });
+    });
+
+    return count;
+  }
+
+  function renderPreview(rows) {
+    const showRows = rows.slice(0, 12);
+    const cols = state.allColumns;
+
+    const head = `<thead><tr>${cols.map((c) => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>`;
+    const body = `<tbody>${showRows.map((r) => `<tr>${cols.map((c) => `<td>${escapeHtml(String(r[c] ?? ''))}</td>`).join('')}</tr>`).join('')}</tbody>`;
+
+    previewWrap.innerHTML = `<table>${head}${body}</table>`;
+    previewWrap.classList.remove('hidden');
+    tablePlaceholder.classList.add('hidden');
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function setupSelectors() {
+    populateMultiSelect('energyCols', state.numericColumns, suggestColumns(profileKeywords('energy'), 2));
+    populateMultiSelect('belongingCols', state.numericColumns, suggestColumns(profileKeywords('belonging'), 2));
+    populateMultiSelect('predictionCols', state.numericColumns, suggestColumns(profileKeywords('prediction'), 1));
+    populateSelect('groupCol', ['(none)', ...state.allColumns], '(none)');
+    populateSelect('timeCol', ['(none)', ...state.allColumns], '(none)');
+  }
+
+  function profileKeywords(kind) {
+    const mode = datasetMode.value === 'auto' ? (state.profile?.mode || 'mixed') : datasetMode.value;
+
+    const common = {
+      energy: ['energy', 'hrv', 'rmssd', 'sleep', 'fatigue', 'stress', 'vital', 'eda', 'bvp', 'ecg', 'rr', 'pulse', 'temp'],
+      belonging: ['belong', 'trust', 'support', 'safety', 'attach', 'cohes', 'inclusion', 'lonely', 'reject', 'social', 'team'],
+      prediction: ['predict', 'decision', 'accuracy', 'adapt', 'update', 'error', 'performance', 'outcome', 'score', 'label', 'class']
+    };
+
+    if (mode === 'physiology') {
+      if (kind === 'energy') return ['hrv', 'rr', 'ecg', 'eda', 'bvp', 'pulse', 'temp', 'stress', 'energy'];
+      if (kind === 'belonging') return ['support', 'social', 'trust', 'cohes', 'belong'];
+      return ['label', 'class', 'score', 'stress', 'outcome'];
+    }
+
+    if (mode === 'survey') {
+      if (kind === 'energy') return ['fatigue', 'stress', 'sleep', 'burnout', 'energy'];
+      if (kind === 'belonging') return ['belong', 'support', 'trust', 'safety', 'cohes', 'inclusion', 'lonely'];
+      return ['outcome', 'score', 'adapt', 'decision', 'performance'];
+    }
+
+    if (mode === 'performance') {
+      if (kind === 'energy') return ['fatigue', 'stress', 'sleep', 'load', 'energy'];
+      if (kind === 'belonging') return ['team', 'support', 'trust', 'cohes', 'safety'];
+      return ['accuracy', 'error', 'performance', 'decision', 'score', 'outcome'];
+    }
+
+    return common[kind];
+  }
+
+  function suggestColumns(keywords, maxCount) {
+    const found = [];
+    const lower = state.numericColumns.map((c) => c.toLowerCase());
+
+    keywords.forEach((keyword) => {
+      const idx = lower.findIndex((col) => col.includes(keyword));
+      if (idx >= 0 && !found.includes(state.numericColumns[idx])) {
+        found.push(state.numericColumns[idx]);
       }
-      if (numericFirst === width && numericSecond >= Math.max(1, Math.floor(width * 0.7))) return false;
-      if (textishFirst >= Math.ceil(width * 0.4) && numericSecond >= Math.floor(width * 0.4)) return true;
-      return textishFirst > numericFirst;
+    });
+
+    while (found.length < maxCount && found.length < state.numericColumns.length) {
+      const candidate = state.numericColumns[found.length];
+      if (!found.includes(candidate)) found.push(candidate);
     }
 
-    function splitCSVLine(line) {
-      const result = []; let current = ''; let inQuotes = false;
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i], next = line[i + 1];
-        if (char === '"') {
-          if (inQuotes && next === '"') { current += '"'; i++; } else { inQuotes = !inQuotes; }
-        } else if (char === ',' && !inQuotes) {
-          result.push(current); current = '';
-        } else { current += char; }
-      }
-      result.push(current);
-      return result;
+    return found;
+  }
+
+  function populateSelect(id, options, selected) {
+    const select = document.getElementById(id);
+    select.innerHTML = options.map((opt) => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
+    if (selected && options.includes(selected)) select.value = selected;
+  }
+
+  function populateMultiSelect(id, options, selectedArr) {
+    const select = document.getElementById(id);
+    select.innerHTML = options.map((opt) => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
+    [...select.options].forEach((opt) => {
+      opt.selected = selectedArr.includes(opt.value);
+    });
+  }
+
+  function getSelectedValues(id) {
+    return [...document.getElementById(id).selectedOptions].map((o) => o.value);
+  }
+
+  function detectDatasetProfile(rows, numericColumns) {
+    const cols = Object.keys(rows[0] || {});
+    const lower = cols.map((c) => c.toLowerCase());
+
+    const physiologyHits = countKeywordHits(lower, ['ecg', 'eda', 'bvp', 'rr', 'heart', 'pulse', 'resp', 'temp', 'emg']);
+    const socialHits = countKeywordHits(lower, ['trust', 'social', 'support', 'belong', 'cohes', 'safety', 'lonely', 'attach', 'team']);
+    const performanceHits = countKeywordHits(lower, ['accuracy', 'error', 'decision', 'score', 'performance', 'outcome', 'label', 'class']);
+
+    const lastCol = cols[cols.length - 1] || '';
+    const lastValues = rows.slice(0, Math.min(rows.length, 200)).map((r) => r[lastCol]);
+    const uniqueLast = new Set(lastValues.map((v) => String(v))).size;
+
+    let mode = 'mixed';
+
+    if (physiologyHits > socialHits && physiologyHits >= performanceHits) mode = 'physiology';
+    else if (socialHits > physiologyHits && socialHits >= performanceHits) mode = 'survey';
+    else if (performanceHits > 0 && performanceHits >= socialHits) mode = 'performance';
+
+    const likelySignalMatrix = numericColumns.length > Math.max(20, cols.length * 0.8) && socialHits === 0;
+    const likelyLabelColumn = uniqueLast <= 12 ? lastCol : null;
+
+    return { mode, likelySignalMatrix, likelyLabelColumn };
+  }
+
+  function countKeywordHits(lowerCols, keywords) {
+    let hits = 0;
+    lowerCols.forEach((c) => {
+      if (keywords.some((k) => c.includes(k))) hits++;
+    });
+    return hits;
+  }
+
+  function renderDatasetProfile() {
+    if (!state.profile) {
+      datasetProfileBox.classList.add('hidden');
+      return;
     }
 
-    function ingestRows(rows, fileName) {
-      if (!rows || !rows.length) { setStatus('No rows detected in the uploaded file.', 'bad'); return; }
-      state.rawRows = rows.map(r => ({ ...r }));
-      state.allColumns = Object.keys(rows[0]);
-      state.numericColumns = detectNumericColumns(rows);
-      state.profile = detectDatasetProfile(rows, state.numericColumns);
-      if (state.numericColumns.length < 3) setStatus('The file loaded, but fewer than three numeric columns were detected. At least three numeric columns are needed for BEP exploration.', 'bad');
-      else setStatus(`Loaded ${fileName} successfully. Detected ${rows.length} rows and ${state.numericColumns.length} numeric columns.`, 'good');
-      renderDatasetMeta(rows);
-      renderPreview(rows);
-      setupSelectors();
-      renderDatasetProfile();
-      mappingSection.classList.remove('hidden');
-      resultsSection.classList.add('hidden');
-      state.analysis = null;
+    const mode = datasetMode.value === 'auto' ? state.profile.mode : datasetMode.value;
+    let tone = 'warn';
+    let msg = `Detected dataset profile: ${mode}.`;
+
+    if (state.profile.likelySignalMatrix) {
+      msg += ' This looks like a signal-heavy matrix. It may support Energy-like analysis well, but may have weak or missing Belonging coverage.';
     }
 
-    function detectNumericColumns(rows) {
-      const cols = Object.keys(rows[0] || {});
-      return cols.filter(col => rows.map(r => cleanNumber(r[col])).filter(v => Number.isFinite(v)).length >= Math.max(4, rows.length * .4));
+    if (state.profile.likelyLabelColumn) {
+      msg += ` Likely label/class column: ${state.profile.likelyLabelColumn}.`;
     }
 
-    function cleanNumber(value) {
-      if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
-      if (value === null || value === undefined) return NaN;
-      const cleaned = String(value).trim().replace(/[%,$]/g, '');
-      const num = parseFloat(cleaned);
-      return Number.isFinite(num) ? num : NaN;
+    if (mode === 'survey') {
+      tone = 'good';
+      msg += ' Survey-style datasets often map better to Belonging variables.';
+    } else if (mode === 'physiology') {
+      tone = 'warn';
+      msg += ' Physiology-heavy datasets often require partial BEP interpretation.';
     }
 
-    function renderDatasetMeta(rows) {
-      const missing = countMissing(rows);
-      datasetMeta.innerHTML = `<div class="meta-item"><div class="label">Rows</div><div class="value">${rows.length}</div></div><div class="meta-item"><div class="label">Columns</div><div class="value">${state.allColumns.length}</div></div><div class="meta-item"><div class="label">Numeric Columns</div><div class="value">${state.numericColumns.length}</div></div><div class="meta-item"><div class="label">Missing Cells</div><div class="value">${missing}</div></div>`;
-      datasetMeta.classList.remove('hidden');
+    datasetProfileBox.className = `status ${tone}`;
+    datasetProfileBox.textContent = msg;
+    datasetProfileBox.classList.remove('hidden');
+  }
+  function runAnalysis() {
+    if (!state.rawRows.length) {
+      setStatus('Upload a dataset first.', 'bad');
+      return;
     }
 
-    function countMissing(rows) { let count = 0; rows.forEach(row => Object.values(row).forEach(v => { if (v === '' || v === null || v === undefined) count++; })); return count; }
+    const energyCols = getSelectedValues('energyCols');
+    const belongingCols = getSelectedValues('belongingCols');
+    const predictionCols = getSelectedValues('predictionCols');
+    const groupCol = document.getElementById('groupCol').value || '(none)';
+    const timeCol = document.getElementById('timeCol').value || '(none)';
+    const energyWeight = parseFloat(document.getElementById('energyWeight').value) || 0.5;
+    const belongingWeight = parseFloat(document.getElementById('belongingWeight').value) || 0.5;
+    const threshold = parseFloat(document.getElementById('threshold').value) || 0.6;
+    const topN = parseInt(document.getElementById('topNLabel').value, 10) || 120;
+    const notes = document.getElementById('notesBox').value.trim();
 
-    function renderPreview(rows) {
-      const showRows = rows.slice(0, 12), cols = state.allColumns;
-      const head = `<thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>`;
-      const body = `<tbody>${showRows.map(r => `<tr>${cols.map(c => `<td>${escapeHtml(String(r[c] ?? ''))}</td>`).join('')}</tr>`).join('')}</tbody>`;
-      previewWrap.innerHTML = `<table>${head}${body}</table>`;
-      previewWrap.classList.remove('hidden');
-      tablePlaceholder.classList.add('hidden');
+    if (!energyCols.length || !belongingCols.length || !predictionCols.length) {
+      setStatus('Select at least one column for Energy, Belonging, and Prediction.', 'bad');
+      return;
     }
 
-    function escapeHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
-
-    function setupSelectors() {
-      populateMultiSelect('energyCols', state.numericColumns, suggestColumns(profileKeywords('energy'), 2));
-      populateMultiSelect('belongingCols', state.numericColumns, suggestColumns(profileKeywords('belonging'), 2));
-      populateMultiSelect('predictionCols', state.numericColumns, suggestColumns(profileKeywords('prediction'), 1));
-      populateSelect('groupCol', ['(none)', ...state.allColumns], '(none)');
-      populateSelect('timeCol', ['(none)', ...state.allColumns], '(none)');
-    }
-
-    function profileKeywords(kind) {
-      const mode = datasetMode.value === 'auto' ? (state.profile?.mode || 'mixed') : datasetMode.value;
-      const common = {
-        energy: ['energy', 'hrv', 'rmssd', 'sleep', 'fatigue', 'stress', 'vital', 'eda', 'bvp', 'ecg', 'rr', 'pulse', 'temp'],
-        belonging: ['belong', 'trust', 'support', 'safety', 'attach', 'cohes', 'inclusion', 'lonely', 'reject', 'social', 'team'],
-        prediction: ['predict', 'decision', 'accuracy', 'adapt', 'update', 'error', 'performance', 'outcome', 'score', 'label', 'class']
-      };
-      if (mode === 'physiology') return kind === 'energy' ? ['hrv', 'rr', 'ecg', 'eda', 'bvp', 'pulse', 'temp', 'stress', 'energy'] : kind === 'belonging' ? ['support', 'social', 'trust', 'cohes', 'belong'] : ['label', 'class', 'score', 'stress', 'outcome'];
-      if (mode === 'survey') return kind === 'energy' ? ['fatigue', 'stress', 'sleep', 'burnout', 'energy'] : kind === 'belonging' ? ['belong', 'support', 'trust', 'safety', 'cohes', 'inclusion', 'lonely'] : ['outcome', 'score', 'adapt', 'decision', 'performance'];
-      if (mode === 'performance') return kind === 'energy' ? ['fatigue', 'stress', 'sleep', 'load', 'energy'] : kind === 'belonging' ? ['team', 'support', 'trust', 'cohes', 'safety'] : ['accuracy', 'error', 'performance', 'decision', 'score', 'outcome'];
-      return common[kind];
-    }
-
-    function suggestColumns(keywords, maxCount) {
-      const found = []; const lower = state.numericColumns.map(c => c.toLowerCase());
-      keywords.forEach(keyword => { const idx = lower.findIndex(col => col.includes(keyword)); if (idx >= 0 && !found.includes(state.numericColumns[idx])) found.push(state.numericColumns[idx]); });
-      while (found.length < maxCount && found.length < state.numericColumns.length) { const candidate = state.numericColumns[found.length]; if (!found.includes(candidate)) found.push(candidate); }
-      return found;
-    }
-
-    function populateSelect(id, options, selected) {
-      const select = document.getElementById(id);
-      select.innerHTML = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
-      if (selected && options.includes(selected)) select.value = selected;
-    }
-
-    function populateMultiSelect(id, options, selectedArr) {
-      const select = document.getElementById(id);
-      select.innerHTML = options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('');
-      [...select.options].forEach(opt => { opt.selected = selectedArr.includes(opt.value); });
-    }
-
-    function getSelectedValues(id) { return [...document.getElementById(id).selectedOptions].map(o => o.value); }
-
-    function detectDatasetProfile(rows, numericColumns) {
-      const cols = Object.keys(rows[0] || {}), lower = cols.map(c => c.toLowerCase());
-      const physiologyHits = countKeywordHits(lower, ['ecg', 'eda', 'bvp', 'rr', 'heart', 'pulse', 'resp', 'temp', 'emg']);
-      const socialHits = countKeywordHits(lower, ['trust', 'social', 'support', 'belong', 'cohes', 'safety', 'lonely', 'attach', 'team']);
-      const performanceHits = countKeywordHits(lower, ['accuracy', 'error', 'decision', 'score', 'performance', 'outcome', 'label', 'class']);
-      const lastCol = cols[cols.length - 1] || '';
-      const lastValues = rows.slice(0, Math.min(rows.length, 200)).map(r => r[lastCol]);
-      const uniqueLast = new Set(lastValues.map(v => String(v))).size;
-      let mode = 'mixed';
-      if (physiologyHits > socialHits && physiologyHits >= performanceHits) mode = 'physiology';
-      else if (socialHits > physiologyHits && socialHits >= performanceHits) mode = 'survey';
-      else if (performanceHits > 0 && performanceHits >= socialHits) mode = 'performance';
-      const likelySignalMatrix = numericColumns.length > Math.max(20, cols.length * 0.8) && socialHits === 0;
-      const likelyLabelColumn = uniqueLast <= 12 ? lastCol : null;
-      return { mode, likelySignalMatrix, likelyLabelColumn };
-    }
-
-    function countKeywordHits(lowerCols, keywords) { let hits = 0; lowerCols.forEach(c => { if (keywords.some(k => c.includes(k))) hits++; }); return hits; }
-
-    function renderDatasetProfile() {
-      if (!state.profile) { datasetProfileBox.classList.add('hidden'); return; }
-      const mode = datasetMode.value === 'auto' ? state.profile.mode : datasetMode.value;
-      let tone = 'warn';
-      let msg = `Detected dataset profile: ${mode}.`;
-      if (state.profile.likelySignalMatrix) msg += ' This looks like a signal-heavy matrix. It may support Energy-like analysis well, but may have weak or missing Belonging coverage.';
-      if (state.profile.likelyLabelColumn) msg += ` Likely label/class column: ${state.profile.likelyLabelColumn}.`;
-      if (mode === 'survey') { tone = 'good'; msg += ' Survey-style datasets often map better to Belonging variables.'; }
-      else if (mode === 'physiology') { tone = 'warn'; msg += ' Physiology-heavy datasets often require partial BEP interpretation.'; }
-      datasetProfileBox.className = `status ${tone}`;
-      datasetProfileBox.textContent = msg;
-      datasetProfileBox.classList.remove('hidden');
-    }
-
-    function runAnalysis() {
-      if (!state.rawRows.length) { setStatus('Upload a dataset first.', 'bad'); return; }
-      const energyCols = getSelectedValues('energyCols');
-      const belongingCols = getSelectedValues('belongingCols');
-      const predictionCols = getSelectedValues('predictionCols');
-      const groupCol = document.getElementById('groupCol').value || '(none)';
-      const timeCol = document.getElementById('timeCol').value || '(none)';
-      const energyWeight = parseFloat(document.getElementById('energyWeight').value) || .5;
-      const belongingWeight = parseFloat(document.getElementById('belongingWeight').value) || .5;
-      const threshold = parseFloat(document.getElementById('threshold').value) || .6;
-      const topN = parseInt(document.getElementById('topNLabel').value, 10) || 120;
-      const notes = document.getElementById('notesBox').value.trim();
-      if (!energyCols.length || !belongingCols.length || !predictionCols.length) { setStatus('Select at least one column for Energy, Belonging, and Prediction.', 'bad'); return; }
-
-      const working = state.rawRows.map((row, idx) => ({
+    const working = state.rawRows
+      .map((row, idx) => ({
         idx,
         raw: row,
-        eVals: energyCols.map(col => cleanNumber(row[col])).filter(Number.isFinite),
-        bVals: belongingCols.map(col => cleanNumber(row[col])).filter(Number.isFinite),
-        pVals: predictionCols.map(col => cleanNumber(row[col])).filter(Number.isFinite),
+        eVals: energyCols.map((col) => cleanNumber(row[col])).filter(Number.isFinite),
+        bVals: belongingCols.map((col) => cleanNumber(row[col])).filter(Number.isFinite),
+        pVals: predictionCols.map((col) => cleanNumber(row[col])).filter(Number.isFinite),
         group: groupCol !== '(none)' ? String(row[groupCol] ?? 'Unknown') : null,
         time: timeCol !== '(none)' ? row[timeCol] : null
-      })).filter(r => r.eVals.length && r.bVals.length && r.pVals.length);
+      }))
+      .filter((r) => r.eVals.length && r.bVals.length && r.pVals.length);
 
-      if (working.length < 8) { setStatus('Not enough valid rows after cleaning and proxy selection. Try different columns or a larger dataset.', 'bad'); return; }
+    if (working.length < 8) {
+      setStatus('Not enough valid rows after cleaning and proxy selection. Try different columns or a larger dataset.', 'bad');
+      return;
+    }
 
-      const normalizedProxyMap = {};
-      [...new Set([...energyCols, ...belongingCols, ...predictionCols])].forEach(col => { normalizedProxyMap[col] = normalizeArray(working.map(r => cleanNumber(r.raw[col]))); });
+    const normalizedProxyMap = {};
+    [...new Set([...energyCols, ...belongingCols, ...predictionCols])].forEach((col) => {
+      normalizedProxyMap[col] = normalizeArray(working.map((r) => cleanNumber(r.raw[col])));
+    });
 
-      working.forEach((row, i) => {
-        row.eNorm = mean(energyCols.map(col => normalizedProxyMap[col][i]).filter(Number.isFinite));
-        row.bNorm = mean(belongingCols.map(col => normalizedProxyMap[col][i]).filter(Number.isFinite));
-        row.pNorm = mean(predictionCols.map(col => normalizedProxyMap[col][i]).filter(Number.isFinite));
-        row.field = weightedMean([row.eNorm, row.bNorm], [energyWeight, belongingWeight]);
-        row.expected = row.field;
-        row.residual = row.pNorm - row.expected;
-        row.state = classifyState(row.eNorm, row.bNorm, row.field, threshold);
+    working.forEach((row, i) => {
+      row.eNorm = mean(energyCols.map((col) => normalizedProxyMap[col][i]).filter(Number.isFinite));
+      row.bNorm = mean(belongingCols.map((col) => normalizedProxyMap[col][i]).filter(Number.isFinite));
+      row.pNorm = mean(predictionCols.map((col) => normalizedProxyMap[col][i]).filter(Number.isFinite));
+      row.field = weightedMean([row.eNorm, row.bNorm], [energyWeight, belongingWeight]);
+      row.expected = row.field;
+      row.residual = row.pNorm - row.expected;
+      row.state = classifyState(row.eNorm, row.bNorm, row.field, threshold);
+    });
+
+    const singleBaselines = [...new Set([...energyCols, ...belongingCols])]
+      .map((col) => ({
+        col,
+        corr: pearson(normalizedProxyMap[col], working.map((r) => r.pNorm))
+      }))
+      .sort((a, b) => Math.abs(b.corr) - Math.abs(a.corr));
+
+    const eCorr = pearson(
+      working.map((r) => r.eNorm),
+      working.map((r) => r.pNorm)
+    );
+
+    const bCorr = pearson(
+      working.map((r) => r.bNorm),
+      working.map((r) => r.pNorm)
+    );
+
+    const fieldCorr = pearson(
+      working.map((r) => r.field),
+      working.map((r) => r.pNorm)
+    );
+
+    const baselineCorr = singleBaselines.length ? singleBaselines[0].corr : 0;
+    const mae = meanAbsoluteError(
+      working.map((r) => r.pNorm),
+      working.map((r) => r.expected)
+    );
+    const fit = clamp01(((fieldCorr + 1) / 2) * 0.72 + (1 - mae) * 0.28);
+    const improvement = fieldCorr - baselineCorr;
+    const stateCounts = countBy(working, (r) => r.state);
+    const groupSummary = buildGroupSummary(working);
+    const heatMatrix = buildHeatMatrix(working);
+    const orderedForLine = orderRowsForTrend(working, timeCol, topN);
+
+    state.analysis = {
+      fileName: state.fileName,
+      n: working.length,
+      energyCols,
+      belongingCols,
+      predictionCols,
+      groupCol,
+      timeCol,
+      energyWeight,
+      belongingWeight,
+      threshold,
+      topN,
+      notes,
+      working,
+      orderedForLine,
+      eCorr,
+      bCorr,
+      fieldCorr,
+      baselineCorr,
+      bestBaseline: singleBaselines[0] || null,
+      mae,
+      fit,
+      improvement,
+      stateCounts,
+      groupSummary,
+      heatMatrix
+    };
+
+    updateStatCards(state.analysis);
+    drawScatter('scatterCanvas', working);
+    drawLine('lineCanvas', orderedForLine);
+    drawBar('barCanvas', stateCounts);
+    drawGroupChart('groupCanvas', groupSummary);
+    drawHeatmap('heatCanvas', heatMatrix);
+    drawComparison('compareCanvas', state.analysis);
+    renderInterpretation(state.analysis);
+
+    resultsSection.classList.remove('hidden');
+    setStatus(`Analysis complete for ${working.length} usable observations.`, 'good');
+    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function orderRowsForTrend(rows, timeCol, topN) {
+    const arr = [...rows];
+    if (timeCol !== '(none)') {
+      arr.sort((a, b) =>
+        String(a.time).localeCompare(String(b.time), undefined, { numeric: true })
+      );
+    }
+    return arr.slice(0, topN);
+  }
+
+  function classifyState(e, b, field, threshold) {
+    if (field >= threshold && e >= 0.5 && b >= 0.5) return 'Higher-field';
+    if (field < threshold * 0.7 && (e < 0.4 || b < 0.4)) return 'Lower-field';
+    return 'Mixed-field';
+  }
+
+  function normalizeArray(arr) {
+    const valid = arr.filter(Number.isFinite);
+    const min = Math.min(...valid);
+    const max = Math.max(...valid);
+
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max === min) {
+      return arr.map(() => 0.5);
+    }
+
+    return arr.map((v) => (Number.isFinite(v) ? clamp01((v - min) / (max - min)) : NaN));
+  }
+
+  function weightedMean(values, weights) {
+    const numerator = values.reduce((acc, v, i) => acc + v * weights[i], 0);
+    const denom = weights.reduce((a, b) => a + b, 0) || 1;
+    return numerator / denom;
+  }
+
+  function clamp01(v) {
+    return Math.max(0, Math.min(1, v));
+  }
+
+  function mean(arr) {
+    return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : NaN;
+  }
+
+  function pearson(a, b) {
+    if (!a.length || a.length !== b.length) return 0;
+
+    const valid = a
+      .map((v, i) => [v, b[i]])
+      .filter((pair) => Number.isFinite(pair[0]) && Number.isFinite(pair[1]));
+
+    if (valid.length < 3) return 0;
+
+    const xs = valid.map((v) => v[0]);
+    const ys = valid.map((v) => v[1]);
+    const mx = mean(xs);
+    const my = mean(ys);
+
+    let num = 0;
+    let denX = 0;
+    let denY = 0;
+
+    for (let i = 0; i < xs.length; i++) {
+      const dx = xs[i] - mx;
+      const dy = ys[i] - my;
+      num += dx * dy;
+      denX += dx * dx;
+      denY += dy * dy;
+    }
+
+    const den = Math.sqrt(denX * denY);
+    return den ? num / den : 0;
+  }
+
+  function meanAbsoluteError(obs, pred) {
+    return mean(obs.map((v, i) => Math.abs(v - pred[i])));
+  }
+
+  function countBy(arr, fn) {
+    return arr.reduce((acc, item) => {
+      const key = fn(item);
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+  }
+
+  function buildGroupSummary(working) {
+    const hasGroups = working.some((r) => r.group);
+    const groups = {};
+
+    if (hasGroups) {
+      working.forEach((r) => {
+        const g = r.group || 'Unknown';
+        groups[g] = groups[g] || [];
+        groups[g].push(r.field);
       });
 
-      const singleBaselines = [...new Set([...energyCols, ...belongingCols])].map(col => ({ col, corr: pearson(normalizedProxyMap[col], working.map(r => r.pNorm)) })).sort((a, b) => Math.abs(b.corr) - Math.abs(a.corr));
-      const eCorr = pearson(working.map(r => r.eNorm), working.map(r => r.pNorm));
-      const bCorr = pearson(working.map(r => r.bNorm), working.map(r => r.pNorm));
-      const fieldCorr = pearson(working.map(r => r.field), working.map(r => r.pNorm));
-      const baselineCorr = singleBaselines.length ? singleBaselines[0].corr : 0;
-      const mae = meanAbsoluteError(working.map(r => r.pNorm), working.map(r => r.expected));
-      const fit = clamp01(((fieldCorr + 1) / 2) * .72 + (1 - mae) * .28);
-      const improvement = fieldCorr - baselineCorr;
-      const stateCounts = countBy(working, r => r.state);
-      const groupSummary = buildGroupSummary(working);
-      const heatMatrix = buildHeatMatrix(working);
-      const orderedForLine = orderRowsForTrend(working, timeCol, topN);
-
-      state.analysis = { fileName: state.fileName, n: working.length, energyCols, belongingCols, predictionCols, groupCol, timeCol, energyWeight, belongingWeight, threshold, topN, notes, working, orderedForLine, eCorr, bCorr, fieldCorr, baselineCorr, bestBaseline: singleBaselines[0] || null, mae, fit, improvement, stateCounts, groupSummary, heatMatrix };
-      updateStatCards(state.analysis);
-      drawScatter('scatterCanvas', working);
-      drawLine('lineCanvas', orderedForLine);
-      drawBar('barCanvas', stateCounts);
-      drawGroupChart('groupCanvas', groupSummary);
-      drawHeatmap('heatCanvas', heatMatrix);
-      drawComparison('compareCanvas', state.analysis);
-      renderInterpretation(state.analysis);
-      resultsSection.classList.remove('hidden');
-      setStatus(`Analysis complete for ${working.length} usable observations.`, 'good');
-      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return Object.entries(groups).map(([group, vals]) => ({
+        group,
+        score: mean(vals),
+        n: vals.length
+      }));
     }
 
-    function orderRowsForTrend(rows, timeCol, topN) { const arr = [...rows]; if (timeCol !== '(none)') arr.sort((a, b) => String(a.time).localeCompare(String(b.time), undefined, { numeric: true })); return arr.slice(0, topN); }
-    function classifyState(e, b, field, threshold) { if (field >= threshold && e >= .5 && b >= .5) return 'Higher-field'; if (field < threshold * .7 && (e < .4 || b < .4)) return 'Lower-field'; return 'Mixed-field'; }
-    function normalizeArray(arr) { const valid = arr.filter(Number.isFinite), min = Math.min(...valid), max = Math.max(...valid); if (!Number.isFinite(min) || !Number.isFinite(max) || max === min) return arr.map(() => .5); return arr.map(v => Number.isFinite(v) ? clamp01((v - min) / (max - min)) : NaN); }
-    function weightedMean(values, weights) { const numerator = values.reduce((acc, v, i) => acc + v * weights[i], 0); const denom = weights.reduce((a, b) => a + b, 0) || 1; return numerator / denom; }
-    function clamp01(v) { return Math.max(0, Math.min(1, v)); }
-    function mean(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : NaN; }
-    function pearson(a, b) { if (!a.length || a.length !== b.length) return 0; const valid = a.map((v, i) => [v, b[i]]).filter(pair => Number.isFinite(pair[0]) && Number.isFinite(pair[1])); if (valid.length < 3) return 0; const xs = valid.map(v => v[0]), ys = valid.map(v => v[1]), mx = mean(xs), my = mean(ys); let num = 0, denX = 0, denY = 0; for (let i = 0; i < xs.length; i++) { const dx = xs[i] - mx, dy = ys[i] - my; num += dx * dy; denX += dx * dx; denY += dy * dy; } const den = Math.sqrt(denX * denY); return den ? num / den : 0; }
-    function meanAbsoluteError(obs, pred) { return mean(obs.map((v, i) => Math.abs(v - pred[i]))); }
-    function countBy(arr, fn) { return arr.reduce((acc, item) => { const key = fn(item); acc[key] = (acc[key] || 0) + 1; return acc; }, {}); }
-    function buildGroupSummary(working) { const hasGroups = working.some(r => r.group); const groups = {}; if (hasGroups) { working.forEach(r => { const g = r.group || 'Unknown'; groups[g] = groups[g] || []; groups[g].push(r.field); }); return Object.entries(groups).map(([group, vals]) => ({ group, score: mean(vals), n: vals.length })); } const sorted = [...working].sort((a, b) => a.field - b.field), bins = 4, chunk = Math.ceil(sorted.length / bins), fallback = []; for (let i = 0; i < bins; i++) { const slice = sorted.slice(i * chunk, (i + 1) * chunk); if (slice.length) fallback.push({ group: `Quartile ${i + 1}`, score: mean(slice.map(r => r.field)), n: slice.length }); } return fallback; }
-    function buildHeatMatrix(working) { const labels = ['Energy', 'Belonging', 'Prediction', 'Field']; const series = { Energy: working.map(r => r.eNorm), Belonging: working.map(r => r.bNorm), Prediction: working.map(r => r.pNorm), Field: working.map(r => r.field) }; const values = labels.map(row => labels.map(col => pearson(series[row], series[col]))); return { labels, values }; }
-    function signed(v) { const str = (Math.round(v * 100) / 100).toFixed(2); return v > 0 ? `+${str}` : str; }
-    function updateStatCards(a) { document.getElementById('fieldAlignmentScore').textContent = `${Math.round(a.fit * 100)}%`; document.getElementById('fieldCorrCard').textContent = signed(a.fieldCorr); document.getElementById('baselineCorrCard').textContent = signed(a.baselineCorr); document.getElementById('improvementCard').textContent = signed(a.improvement); }
+    const sorted = [...working].sort((a, b) => a.field - b.field);
+    const bins = 4;
+    const chunk = Math.ceil(sorted.length / bins);
+    const fallback = [];
 
-    function renderInterpretation(a) {
-      const dominant = dominantState(a.stateCounts);
-      const fitText = interpretFit(a.fit);
-      const corrText = interpretCorrelation(a.fieldCorr);
-      const direction = a.improvement > 0 ? 'outperformed' : a.improvement < 0 ? 'did not outperform' : 'matched';
-      const bestBaselineLabel = a.bestBaseline ? `${a.bestBaseline.col} (${signed(a.bestBaseline.corr)})` : 'none';
-      const profileMode = datasetMode.value === 'auto' ? (state.profile?.mode || 'mixed') : datasetMode.value;
-      const partialModeNote = profileMode === 'physiology' || state.profile?.likelySignalMatrix
+    for (let i = 0; i < bins; i++) {
+      const slice = sorted.slice(i * chunk, (i + 1) * chunk);
+      if (slice.length) {
+        fallback.push({
+          group: `Quartile ${i + 1}`,
+          score: mean(slice.map((r) => r.field)),
+          n: slice.length
+        });
+      }
+    }
+
+    return fallback;
+  }
+
+  function buildHeatMatrix(working) {
+    const labels = ['Energy', 'Belonging', 'Prediction', 'Field'];
+
+    const series = {
+      Energy: working.map((r) => r.eNorm),
+      Belonging: working.map((r) => r.bNorm),
+      Prediction: working.map((r) => r.pNorm),
+      Field: working.map((r) => r.field)
+    };
+
+    const values = labels.map((row) =>
+      labels.map((col) => pearson(series[row], series[col]))
+    );
+
+    return { labels, values };
+  }
+
+  function signed(v) {
+    const str = (Math.round(v * 100) / 100).toFixed(2);
+    return v > 0 ? `+${str}` : str;
+  }
+
+  function updateStatCards(a) {
+    document.getElementById('fieldAlignmentScore').textContent = `${Math.round(a.fit * 100)}%`;
+    document.getElementById('fieldCorrCard').textContent = signed(a.fieldCorr);
+    document.getElementById('baselineCorrCard').textContent = signed(a.baselineCorr);
+    document.getElementById('improvementCard').textContent = signed(a.improvement);
+  }
+
+  function renderInterpretation(a) {
+    const dominant = dominantState(a.stateCounts);
+    const fitText = interpretFit(a.fit);
+    const corrText = interpretCorrelation(a.fieldCorr);
+    const direction =
+      a.improvement > 0 ? 'outperformed' : a.improvement < 0 ? 'did not outperform' : 'matched';
+    const bestBaselineLabel = a.bestBaseline
+      ? `${a.bestBaseline.col} (${signed(a.bestBaseline.corr)})`
+      : 'none';
+
+    const profileMode =
+      datasetMode.value === 'auto' ? state.profile?.mode || 'mixed' : datasetMode.value;
+
+    const partialModeNote =
+      profileMode === 'physiology' || state.profile?.likelySignalMatrix
         ? 'This dataset appears physiology-heavy, so Belonging may be weakly represented or absent. Treat this run as partial BEP exploration rather than full-construct testing.'
         : 'This dataset appears more suitable for broader BEP construct testing.';
-      document.getElementById('interpretationBox').innerHTML = `<div class="kicker">Interpretation Summary</div>This run produced a <strong>${Math.round(a.fit * 100)}% field-alignment score</strong>, indicating <strong>${fitText}</strong> between the selected BEP proxy structure and the composite outcome variable. The overall association between the composite BEP field score and the selected Prediction composite was <strong>${signed(a.fieldCorr)}</strong>, which suggests <strong>${corrText}</strong>.<br/><br/>The strongest single-variable baseline in this run was <strong>${bestBaselineLabel}</strong>. Relative to that baseline, the BEP composite <strong>${direction}</strong> the single-variable explanation by <strong>${signed(a.improvement)}</strong>. The dataset was primarily dominated by <strong>${dominant}</strong> observations.<br/><br/><strong>Dataset suitability note:</strong> ${partialModeNote}<br/><br/>Suggested researcher-facing framing: <strong>"Under the current proxy mapping, the uploaded dataset appears ${a.fit >= .7 ? 'strongly' : a.fit >= .52 ? 'moderately' : 'weakly'} consistent with a BEP-style field-gated account of outcome variation. These results should be treated as exploratory model support or non-support, not proof."</strong><br/><br/>${a.notes ? `<strong>Research notes recorded:</strong> ${escapeHtml(a.notes)}<br/><br/>` : ''}Recommended next steps: confirm the header mode, choose only variables you actually recognize, leave Group and Time at none unless the file clearly contains them, and rerun with alternate proxy selections if the dataset is signal-heavy.`;
+
+    document.getElementById('interpretationBox').innerHTML = `
+      <div class="kicker">Interpretation Summary</div>
+      This run produced a <strong>${Math.round(a.fit * 100)}% field-alignment score</strong>, indicating <strong>${fitText}</strong> between the selected BEP proxy structure and the composite outcome variable. The overall association between the composite BEP field score and the selected Prediction composite was <strong>${signed(a.fieldCorr)}</strong>, which suggests <strong>${corrText}</strong>.<br/><br/>
+      The strongest single-variable baseline in this run was <strong>${bestBaselineLabel}</strong>. Relative to that baseline, the BEP composite <strong>${direction}</strong> the single-variable explanation by <strong>${signed(a.improvement)}</strong>. The dataset was primarily dominated by <strong>${dominant}</strong> observations.<br/><br/>
+      <strong>Dataset suitability note:</strong> ${partialModeNote}<br/><br/>
+      Suggested researcher-facing framing: <strong>"Under the current proxy mapping, the uploaded dataset appears ${a.fit >= 0.7 ? 'strongly' : a.fit >= 0.52 ? 'moderately' : 'weakly'} consistent with a BEP-style field-gated account of outcome variation. These results should be treated as exploratory model support or non-support, not proof."</strong><br/><br/>
+      ${a.notes ? `<strong>Research notes recorded:</strong> ${escapeHtml(a.notes)}<br/><br/>` : ''}
+      Recommended next steps: confirm the header mode, choose only variables you actually recognize, leave Group and Time at none unless the file clearly contains them, and rerun with alternate proxy selections if the dataset is signal-heavy.
+    `;
+  }
+
+  function dominantState(counts) {
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return entries.length ? entries[0][0] : 'Mixed-field';
+  }
+
+  function interpretFit(fit) {
+    if (fit >= 0.78) return 'strong exploratory alignment';
+    if (fit >= 0.58) return 'moderate exploratory alignment';
+    if (fit >= 0.42) return 'partial exploratory alignment';
+    return 'weak exploratory alignment';
+  }
+
+  function interpretCorrelation(corr) {
+    const abs = Math.abs(corr);
+    if (abs >= 0.7) return 'a strong association';
+    if (abs >= 0.45) return 'a moderate association';
+    if (abs >= 0.2) return 'a modest association';
+    return 'a weak association';
+  }
+
+  function clearCanvas(ctx, canvas) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function drawAxes(ctx, w, h, pad, xLabel, yLabel) {
+    ctx.strokeStyle = 'rgba(255,255,255,.14)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad, pad);
+    ctx.lineTo(pad, h - pad);
+    ctx.lineTo(w - pad, h - pad);
+    ctx.stroke();
+
+    ctx.font = '12px Inter, sans-serif';
+    ctx.fillStyle = '#bdd0ec';
+    ctx.textAlign = 'center';
+    ctx.fillText(xLabel, w / 2, h - 14);
+
+    ctx.save();
+    ctx.translate(16, h / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+
+    for (let i = 0; i <= 4; i++) {
+      const y = h - pad - i * ((h - pad * 2) / 4);
+      ctx.strokeStyle = 'rgba(255,255,255,.07)';
+      ctx.beginPath();
+      ctx.moveTo(pad, y);
+      ctx.lineTo(w - pad, y);
+      ctx.stroke();
+
+      ctx.fillStyle = '#8ea7ca';
+      ctx.textAlign = 'right';
+      ctx.fillText((i / 4).toFixed(2), pad - 8, y + 4);
+    }
+  }
+
+  function drawScatter(id, data) {
+    const canvas = document.getElementById(id);
+    const ctx = canvas.getContext('2d');
+    clearCanvas(ctx, canvas);
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const pad = 48;
+
+    ctx.fillStyle = '#0d1c2f';
+    ctx.fillRect(0, 0, w, h);
+
+    const midX = pad + (w - pad * 2) / 2;
+    const midY = pad + (h - pad * 2) / 2;
+
+    ctx.fillStyle = 'rgba(255,159,159,.08)';
+    ctx.fillRect(pad, midY, midX - pad, h - pad - midY);
+    ctx.fillStyle = 'rgba(255,210,125,.08)';
+    ctx.fillRect(midX, midY, w - pad - midX, h - pad - midY);
+    ctx.fillStyle = 'rgba(114,212,255,.08)';
+    ctx.fillRect(midX, pad, w - pad - midX, midY - pad);
+
+    ctx.strokeStyle = 'rgba(255,255,255,.12)';
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(midX, pad);
+    ctx.lineTo(midX, h - pad);
+    ctx.moveTo(pad, midY);
+    ctx.lineTo(w - pad, midY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    drawAxes(ctx, w, h, pad, 'Belonging', 'Energy');
+
+    data.forEach((d) => {
+      const x = pad + d.bNorm * (w - pad * 2);
+      const y = h - pad - d.eNorm * (h - pad * 2);
+      const r = 4 + d.pNorm * 9;
+
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle =
+        d.state === 'Higher-field'
+          ? 'rgba(114,212,255,.85)'
+          : d.state === 'Mixed-field'
+            ? 'rgba(255,210,125,.8)'
+            : 'rgba(255,159,159,.82)';
+      ctx.fill();
+    });
+  }
+
+  function drawLine(id, ordered) {
+    const canvas = document.getElementById(id);
+    const ctx = canvas.getContext('2d');
+    clearCanvas(ctx, canvas);
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const pad = 48;
+
+    ctx.fillStyle = '#0d1c2f';
+    ctx.fillRect(0, 0, w, h);
+
+    drawAxes(ctx, w, h, pad, 'Ordered observations', 'Normalized score');
+    plotLine(ctx, ordered.map((r) => r.expected), pad, w, h, 'rgba(114,212,255,.95)');
+    plotLine(ctx, ordered.map((r) => r.pNorm), pad, w, h, 'rgba(151,255,201,.95)');
+    drawLineLegend(ctx, w);
+  }
+
+  function plotLine(ctx, values, pad, w, h, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+
+    values.forEach((v, i) => {
+      const x = pad + (i / Math.max(values.length - 1, 1)) * (w - pad * 2);
+      const y = h - pad - v * (h - pad * 2);
+
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+
+    ctx.stroke();
+  }
+
+  function drawLineLegend(ctx, w) {
+    ctx.font = '12px Inter, sans-serif';
+
+    ctx.fillStyle = 'rgba(114,212,255,.95)';
+    ctx.fillRect(w - 220, 18, 14, 4);
+    ctx.fillStyle = '#dbe9ff';
+    ctx.fillText('BEP expected', w - 198, 25);
+
+    ctx.fillStyle = 'rgba(151,255,201,.95)';
+    ctx.fillRect(w - 108, 18, 14, 4);
+    ctx.fillStyle = '#dbe9ff';
+    ctx.fillText('Observed', w - 86, 25);
+  }
+
+  function drawBar(id, stateCounts) {
+    const canvas = document.getElementById(id);
+    const ctx = canvas.getContext('2d');
+    const entries = ['Lower-field', 'Mixed-field', 'Higher-field'].map((key) => [
+      key,
+      stateCounts[key] || 0
+    ]);
+
+    drawBars(
+      ctx,
+      canvas,
+      entries,
+      ['rgba(255,159,159,.86)', 'rgba(255,210,125,.86)', 'rgba(114,212,255,.88)'],
+      'Count'
+    );
+  }
+
+  function drawGroupChart(id, groups) {
+    const canvas = document.getElementById(id);
+    const ctx = canvas.getContext('2d');
+    const entries = groups.map((g) => [g.group, g.score]);
+
+    drawBars(
+      ctx,
+      canvas,
+      entries,
+      entries.map(() => 'rgba(151,255,201,.86)'),
+      'Mean Field Score',
+      true
+    );
+  }
+
+  function drawComparison(id, a) {
+    const canvas = document.getElementById(id);
+    const ctx = canvas.getContext('2d');
+    const entries = [
+      ['Best baseline', Math.abs(a.baselineCorr)],
+      ['BEP composite', Math.abs(a.fieldCorr)]
+    ];
+
+    drawBars(
+      ctx,
+      canvas,
+      entries,
+      ['rgba(255,210,125,.88)', 'rgba(114,212,255,.9)'],
+      'Absolute correlation',
+      true
+    );
+  }
+
+  function drawBars(ctx, canvas, entries, colors, yLabel, decimal = false) {
+    clearCanvas(ctx, canvas);
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const pad = 56;
+
+    ctx.fillStyle = '#0d1c2f';
+    ctx.fillRect(0, 0, w, h);
+    drawAxes(ctx, w, h, pad, 'Category', yLabel);
+
+    const maxVal = Math.max(...entries.map((e) => e[1]), 1);
+    const barAreaW = w - pad * 2;
+    const gap = 24;
+    const barW = Math.max(34, (barAreaW - gap * (entries.length + 1)) / Math.max(entries.length, 1));
+
+    entries.forEach((entry, i) => {
+      const x = pad + gap + i * (barW + gap);
+      const height = (entry[1] / maxVal) * (h - pad * 2);
+      const y = h - pad - height;
+
+      roundRect(ctx, x, y, barW, height, 10, true, false, colors[i % colors.length]);
+
+      ctx.fillStyle = '#e7f0ff';
+      ctx.font = '12px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(decimal ? entry[1].toFixed(2) : String(entry[1]), x + barW / 2, y - 10);
+
+      ctx.save();
+      ctx.translate(x + barW / 2, h - pad + 18);
+      ctx.rotate(-0.18);
+      ctx.fillText(entry[0].slice(0, 18), 0, 0);
+      ctx.restore();
+    });
+  }
+
+  function drawHeatmap(id, matrix) {
+    const canvas = document.getElementById(id);
+    const ctx = canvas.getContext('2d');
+    clearCanvas(ctx, canvas);
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const pad = 90;
+    const labels = matrix.labels;
+    const n = labels.length;
+    const cell = Math.min((w - pad - 30) / n, (h - pad - 20) / n);
+
+    ctx.fillStyle = '#0d1c2f';
+    ctx.fillRect(0, 0, w, h);
+
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        const v = matrix.values[r][c];
+        const alpha = Math.abs(v);
+        const color =
+          v >= 0
+            ? `rgba(114,212,255,${0.18 + alpha * 0.72})`
+            : `rgba(255,159,159,${0.18 + alpha * 0.72})`;
+
+        const x = pad + c * cell;
+        const y = 32 + r * cell;
+
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, cell - 4, cell - 4);
+
+        ctx.fillStyle = '#f2f7ff';
+        ctx.textAlign = 'center';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.fillText(signed(v), x + (cell - 4) / 2, y + cell / 2);
+      }
     }
 
-    function dominantState(counts) { const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]); return entries.length ? entries[0][0] : 'Mixed-field'; }
-    function interpretFit(fit) { if (fit >= .78) return 'strong exploratory alignment'; if (fit >= .58) return 'moderate exploratory alignment'; if (fit >= .42) return 'partial exploratory alignment'; return 'weak exploratory alignment'; }
-    function interpretCorrelation(corr) { const abs = Math.abs(corr); if (abs >= .7) return 'a strong association'; if (abs >= .45) return 'a moderate association'; if (abs >= .2) return 'a modest association'; return 'a weak association'; }
-    function clearCanvas(ctx, canvas) { ctx.clearRect(0, 0, canvas.width, canvas.height); }
-    function drawAxes(ctx, w, h, pad, xLabel, yLabel) { ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pad, pad); ctx.lineTo(pad, h - pad); ctx.lineTo(w - pad, h - pad); ctx.stroke(); ctx.font = '12px Inter, sans-serif'; ctx.fillStyle = '#bdd0ec'; ctx.textAlign = 'center'; ctx.fillText(xLabel, w / 2, h - 14); ctx.save(); ctx.translate(16, h / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yLabel, 0, 0); ctx.restore(); for (let i = 0; i <= 4; i++) { const y = h - pad - i * ((h - pad * 2) / 4); ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke(); ctx.fillStyle = '#8ea7ca'; ctx.textAlign = 'right'; ctx.fillText((i / 4).toFixed(2), pad - 8, y + 4); } }
-    function drawScatter(id, data) { const canvas = document.getElementById(id), ctx = canvas.getContext('2d'); clearCanvas(ctx, canvas); const w = canvas.width, h = canvas.height, pad = 48; ctx.fillStyle = '#0d1c2f'; ctx.fillRect(0, 0, w, h); const midX = pad + (w - pad * 2) / 2, midY = pad + (h - pad * 2) / 2; ctx.fillStyle = 'rgba(255,159,159,.08)'; ctx.fillRect(pad, midY, midX - pad, h - pad - midY); ctx.fillStyle = 'rgba(255,210,125,.08)'; ctx.fillRect(midX, midY, w - pad - midX, h - pad - midY); ctx.fillStyle = 'rgba(114,212,255,.08)'; ctx.fillRect(midX, pad, w - pad - midX, midY - pad); ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(midX, pad); ctx.lineTo(midX, h - pad); ctx.moveTo(pad, midY); ctx.lineTo(w - pad, midY); ctx.stroke(); ctx.setLineDash([]); drawAxes(ctx, w, h, pad, 'Belonging', 'Energy'); data.forEach(d => { const x = pad + d.bNorm * (w - pad * 2), y = h - pad - d.eNorm * (h - pad * 2), r = 4 + d.pNorm * 9; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = d.state === 'Higher-field' ? 'rgba(114,212,255,.85)' : d.state === 'Mixed-field' ? 'rgba(255,210,125,.8)' : 'rgba(255,159,159,.82)'; ctx.fill(); }); }
-    function drawLine(id, ordered) { const canvas = document.getElementById(id), ctx = canvas.getContext('2d'); clearCanvas(ctx, canvas); const w = canvas.width, h = canvas.height, pad = 48; ctx.fillStyle = '#0d1c2f'; ctx.fillRect(0, 0, w, h); drawAxes(ctx, w, h, pad, 'Ordered observations', 'Normalized score'); plotLine(ctx, ordered.map(r => r.expected), pad, w, h, 'rgba(114,212,255,.95)'); plotLine(ctx, ordered.map(r => r.pNorm), pad, w, h, 'rgba(151,255,201,.95)'); drawLineLegend(ctx, w); }
-    function plotLine(ctx, values, pad, w, h, color) { ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath(); values.forEach((v, i) => { const x = pad + (i / Math.max(values.length - 1, 1)) * (w - pad * 2), y = h - pad - v * (h - pad * 2); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }); ctx.stroke(); }
-    function drawLineLegend(ctx, w) { ctx.font = '12px Inter, sans-serif'; ctx.fillStyle = 'rgba(114,212,255,.95)'; ctx.fillRect(w - 220, 18, 14, 4); ctx.fillStyle = '#dbe9ff'; ctx.fillText('BEP expected', w - 198, 25); ctx.fillStyle = 'rgba(151,255,201,.95)'; ctx.fillRect(w - 108, 18, 14, 4); ctx.fillStyle = '#dbe9ff'; ctx.fillText('Observed', w - 86, 25); }
-    function drawBar(id, stateCounts) { const canvas = document.getElementById(id), ctx = canvas.getContext('2d'); const entries = ['Lower-field', 'Mixed-field', 'Higher-field'].map(key => [key, stateCounts[key] || 0]); drawBars(ctx, canvas, entries, ['rgba(255,159,159,.86)', 'rgba(255,210,125,.86)', 'rgba(114,212,255,.88)'], 'Count'); }
-    function drawGroupChart(id, groups) { const canvas = document.getElementById(id), ctx = canvas.getContext('2d'); const entries = groups.map(g => [g.group, g.score]); drawBars(ctx, canvas, entries, entries.map(() => 'rgba(151,255,201,.86)'), 'Mean Field Score', true); }
-    function drawComparison(id, a) { const canvas = document.getElementById(id), ctx = canvas.getContext('2d'); const entries = [['Best baseline', Math.abs(a.baselineCorr)], ['BEP composite', Math.abs(a.fieldCorr)]]; drawBars(ctx, canvas, entries, ['rgba(255,210,125,.88)', 'rgba(114,212,255,.9)'], 'Absolute correlation', true); }
-    function drawBars(ctx, canvas, entries, colors, yLabel, decimal = false) { clearCanvas(ctx, canvas); const w = canvas.width, h = canvas.height, pad = 56; ctx.fillStyle = '#0d1c2f'; ctx.fillRect(0, 0, w, h); drawAxes(ctx, w, h, pad, 'Category', yLabel); const maxVal = Math.max(...entries.map(e => e[1]), 1), barAreaW = w - pad * 2, gap = 24, barW = Math.max(34, (barAreaW - gap * (entries.length + 1)) / Math.max(entries.length, 1)); entries.forEach((entry, i) => { const x = pad + gap + i * (barW + gap), height = (entry[1] / maxVal) * (h - pad * 2), y = h - pad - height; roundRect(ctx, x, y, barW, height, 10, true, false, colors[i % colors.length]); ctx.fillStyle = '#e7f0ff'; ctx.font = '12px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(decimal ? entry[1].toFixed(2) : String(entry[1]), x + barW / 2, y - 10); ctx.save(); ctx.translate(x + barW / 2, h - pad + 18); ctx.rotate(-.18); ctx.fillText(entry[0].slice(0, 18), 0, 0); ctx.restore(); }); }
-    function drawHeatmap(id, matrix) { const canvas = document.getElementById(id), ctx = canvas.getContext('2d'); clearCanvas(ctx, canvas); const w = canvas.width, h = canvas.height, pad = 90, labels = matrix.labels, n = labels.length, cell = Math.min((w - pad - 30) / n, (h - pad - 20) / n); ctx.fillStyle = '#0d1c2f'; ctx.fillRect(0, 0, w, h); for (let r = 0; r < n; r++) { for (let c = 0; c < n; c++) { const v = matrix.values[r][c], alpha = Math.abs(v), color = v >= 0 ? `rgba(114,212,255,${0.18 + alpha * .72})` : `rgba(255,159,159,${0.18 + alpha * .72})`, x = pad + c * cell, y = 32 + r * cell; ctx.fillStyle = color; ctx.fillRect(x, y, cell - 4, cell - 4); ctx.fillStyle = '#f2f7ff'; ctx.textAlign = 'center'; ctx.font = '12px Inter, sans-serif'; ctx.fillText(signed(v), x + (cell - 4) / 2, y + cell / 2); } } ctx.fillStyle = '#d7e5fb'; ctx.textAlign = 'center'; labels.forEach((label, i) => { const x = pad + i * cell + (cell - 4) / 2; ctx.fillText(label, x, 20); ctx.save(); ctx.translate(60, 32 + i * cell + (cell - 4) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(label, 0, 0); ctx.restore(); }); }
-    function roundRect(ctx, x, y, width, height, radius, fill, stroke, fillStyle = '#fff') { if (width < 0) width = 0; if (height < 0) height = 0; ctx.beginPath(); ctx.moveTo(x + radius, y); ctx.lineTo(x + width - radius, y); ctx.quadraticCurveTo(x + width, y, x + width, y + radius); ctx.lineTo(x + width, y + height - radius); ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height); ctx.lineTo(x + radius, y + height); ctx.quadraticCurveTo(x, y + height, x, y + height - radius); ctx.lineTo(x, y + radius); ctx.quadraticCurveTo(x, y, x + radius, y); ctx.closePath(); if (fill) { ctx.fillStyle = fillStyle; ctx.fill(); } if (stroke) ctx.stroke(); }
+    ctx.fillStyle = '#d7e5fb';
+    ctx.textAlign = 'center';
 
-    function exportReport() {
-      if (!state.analysis) { setStatus('Run the analysis before exporting a report.', 'bad'); return; }
-      const a = state.analysis;
-      const profileName = datasetMode.value === 'auto' ? (state.profile?.mode || 'mixed') : datasetMode.value;
-      const text = `BEP FIELD LAB v2.1 REPORT\n\nFile: ${a.fileName}\nUsable observations: ${a.n}\n\nEnergy columns: ${a.energyCols.join(', ')}\nBelonging columns: ${a.belongingCols.join(', ')}\nPrediction columns: ${a.predictionCols.join(', ')}\nGroup column: ${a.groupCol}\nTime column: ${a.timeCol}\n\nEnergy weight: ${a.energyWeight}\nBelonging weight: ${a.belongingWeight}\nHigh-field threshold: ${a.threshold}\n\nField alignment score: ${Math.round(a.fit * 100)}%\nComposite field correlation: ${signed(a.fieldCorr)}\nEnergy to Prediction correlation: ${signed(a.eCorr)}\nBelonging to Prediction correlation: ${signed(a.bCorr)}\nBest single baseline: ${a.bestBaseline ? `${a.bestBaseline.col} (${signed(a.bestBaseline.corr)})` : 'none'}\nBEP improvement over baseline: ${signed(a.improvement)}\nMean absolute error: ${a.mae.toFixed(3)}\n\nField states:\n${Object.entries(a.stateCounts).map(([k, v]) => `- ${k}: ${v}`).join('\n')}\n\nInterpretive note:\nThis output is exploratory. It indicates whether the selected proxy mapping is more or less consistent with a BEP-style field model under current settings. It does not prove the theory or establish causal certainty.\n\nDataset profile:\n${profileName}\n${state.profile?.likelySignalMatrix ? 'Signal-heavy matrix detected: yes\n' : ''}${state.profile?.likelyLabelColumn ? `Likely label column: ${state.profile.likelyLabelColumn}\n` : ''}\nResearch notes:\n${a.notes || 'None'}\n`;
-      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `BEP_Field_Lab_v2_1_Report_${Date.now()}.txt`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      setStatus('Report exported.', 'good');
+    labels.forEach((label, i) => {
+      const x = pad + i * cell + (cell - 4) / 2;
+      ctx.fillText(label, x, 20);
+
+      ctx.save();
+      ctx.translate(60, 32 + i * cell + (cell - 4) / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    });
+  }
+
+  function roundRect(ctx, x, y, width, height, radius, fill, stroke, fillStyle = '#fff') {
+    if (width < 0) width = 0;
+    if (height < 0) height = 0;
+
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+
+    if (fill) {
+      ctx.fillStyle = fillStyle;
+      ctx.fill();
     }
+    if (stroke) ctx.stroke();
+  }
+
+  function exportReport() {
+    if (!state.analysis) {
+      setStatus('Run the analysis before exporting a report.', 'bad');
+      return;
+    }
+
+    const a = state.analysis;
+    const profileName = datasetMode.value === 'auto' ? state.profile?.mode || 'mixed' : datasetMode.value;
+
+    const text = `BEP FIELD LAB v2.1 REPORT
+
+File: ${a.fileName}
+Usable observations: ${a.n}
+
+Energy columns: ${a.energyCols.join(', ')}
+Belonging columns: ${a.belongingCols.join(', ')}
+Prediction columns: ${a.predictionCols.join(', ')}
+Group column: ${a.groupCol}
+Time column: ${a.timeCol}
+
+Energy weight: ${a.energyWeight}
+Belonging weight: ${a.belongingWeight}
+High-field threshold: ${a.threshold}
+
+Field alignment score: ${Math.round(a.fit * 100)}%
+Composite field correlation: ${signed(a.fieldCorr)}
+Energy to Prediction correlation: ${signed(a.eCorr)}
+Belonging to Prediction correlation: ${signed(a.bCorr)}
+Best single baseline: ${a.bestBaseline ? `${a.bestBaseline.col} (${signed(a.bestBaseline.corr)})` : 'none'}
+BEP improvement over baseline: ${signed(a.improvement)}
+Mean absolute error: ${a.mae.toFixed(3)}
+
+Field states:
+${Object.entries(a.stateCounts)
+  .map(([k, v]) => `- ${k}: ${v}`)
+  .join('\n')}
+
+Interpretive note:
+This output is exploratory. It indicates whether the selected proxy mapping is more or less consistent with a BEP-style field model under current settings. It does not prove the theory or establish causal certainty.
+
+Dataset profile:
+${profileName}
+${state.profile?.likelySignalMatrix ? 'Signal-heavy matrix detected: yes\n' : ''}${state.profile?.likelyLabelColumn ? `Likely label column: ${state.profile.likelyLabelColumn}\n` : ''}
+
+Research notes:
+${a.notes || 'None'}
+`;
+
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `BEP_Field_Lab_v3_Report_${Date.now()}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    setStatus('Report exported.', 'good');
+  }
   </script>
 </body>
 </html>
