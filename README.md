@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/26042264/README.md)
+[README.md](https://github.com/user-attachments/files/26103114/README.md)
 # BEP Field Lab v4
 
 Research-grade interactive tool for exploring **Belonging–Energy–Prediction (BEP) field dynamics** — including the **Fourth Field** of human–AI interaction.
